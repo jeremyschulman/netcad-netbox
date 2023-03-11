@@ -23,7 +23,7 @@ async def nb_device_push(dev: Device, status: str):
         The expected NetBox device status (slug), for example "active" or "planning"
     """
     log = get_logger()
-    log.info(f"{dev.name}: Pushing device  into NetBox ...")
+    log.info(f"{dev.name}: Pushing device into NetBox ...")
     async with NetboxClient() as nb_api:
         await device_sync.nb_sync_device_obj(nb_api, dev, status)
 

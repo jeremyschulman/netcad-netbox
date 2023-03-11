@@ -1,8 +1,23 @@
+# -----------------------------------------------------------------------------
+# System Imports
+# -----------------------------------------------------------------------------
+
 from http import HTTPStatus
+
+# -----------------------------------------------------------------------------
+# Public Imports
+# -----------------------------------------------------------------------------
+
 from httpx import Response
+from first import first
 
 from netcad.device import Device
 from netcad.logger import get_logger
+from pydantic import ValidationError
+
+# -----------------------------------------------------------------------------
+# Private Imports
+# -----------------------------------------------------------------------------
 
 from netcad_netbox.aionetbox import NetboxClient, nb_fetch
 
@@ -11,15 +26,31 @@ from netcad_netbox.netbox_design_config import (
     NetBoxDeviceProperties,
 )
 
-from first import first
+
+# -----------------------------------------------------------------------------
+#
+#                                 CODE BEGINS
+#
+# -----------------------------------------------------------------------------
 
 
 async def nb_sync_device_obj(nb_api: NetboxClient, dev: Device, status: str):
+    log = get_logger()
     res: Response = await nb_api.op.dcim_devices_list(params=dict(name=dev.name))
     res.raise_for_status()
 
+    nb_design_cfg: NetBoxDesignConfig = dev.design.config["netcad_netbox"]
+    try:
+        dev_props_design = nb_design_cfg.get_device_properties(dev, status=status)
+
+    except ValidationError as exc:
+        log.error(
+            f"{dev.name} failed to obtain design properies for NetBox: {str(exc)}"
+        )
+        return
+
     if not (nb_dev_rec := first(res.json()["results"])):
-        await nb_create_new_device_obj(nb_api, dev, status)
+        await nb_create_new_device_obj(nb_api, dev, dev_props_design)
         return
 
     # if we are here, then the device record exists, and we should check to see
@@ -28,9 +59,60 @@ async def nb_sync_device_obj(nb_api: NetboxClient, dev: Device, status: str):
     await nb_sync_existing_device_obj(nb_api, dev, status, nb_dev_rec)
 
 
-async def nb_create_new_device_obj(nb_api: NetboxClient, dev: Device, status: str):
+async def nb_create_new_device_obj(
+    nb_api: NetboxClient, dev: Device, dev_props_design: NetBoxDeviceProperties
+) -> dict | None:
+    """
+    Creates a new NetBox device record.  If ok, then this function returns the
+    new record object.  If not OK, then this function returns None.
+
+    Parameters
+    ----------
+    nb_api:
+        The instance to the NetBox API
+
+    dev:
+        The design device instance
+
+    dev_props_design:
+        The properties for the NetBox device record
+    """
+
     log = get_logger()
-    log.info(f"Creating new NetBox device record: {dev.name}")
+    log.info(f"{dev.name}: Creating new NetBox device record")
+
+    dt_rec = await nb_fetch.fetch_device_type(
+        nb_api, device_type=dev_props_design.device_type
+    )
+    site_rec = await nb_fetch.fetch_site(nb_api, site_slug=dev_props_design.site)
+    dr_rec = await nb_fetch.fetch_device_role(
+        nb_api, device_role=dev_props_design.device_role
+    )
+    os_rec = await nb_fetch.fetch_platform(nb_api, platform=dev_props_design.platform)
+
+    new_dev_obj = dict(
+        name=dev.name,
+        status=dev_props_design.status,
+        site=site_rec["id"],
+        device_type=dt_rec["id"],
+        device_role=dr_rec["id"],
+        platform=os_rec["id"],
+    )
+
+    res = nb_api.op.dcim_devices_create(json=new_dev_obj)
+    if res.status_code == HTTPStatus:
+        log.info(f"{dev.name}: Created in NetBox OK.")
+        return res
+
+    log.error(f"{dev.name}: Failed to create record in NetBox: {res.text}")
+    return None
+
+
+# =============================================================================
+#
+#                    Push / Sync Existing Device Record
+#
+# =============================================================================
 
 
 async def nb_sync_existing_device_obj(
@@ -113,7 +195,7 @@ async def _patch_nb_record(
                 patch_nb_dev["status"] = dev_props_design.status
             case "product_model":
                 log.error(
-                    f'{dev.name}: device-type "{dev_props_design.device_type}" matches, "'
+                    f'{dev.name}: device-type "{dev_props_design.device_type}" matches, '
                     f'"but not product-model "{dev_props_design.product_model}", check NetBox.'
                 )
 
