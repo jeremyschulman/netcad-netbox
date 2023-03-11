@@ -1,4 +1,3 @@
-import click
 from netcad.cli import cli as netcad_cli
 
 

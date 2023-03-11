@@ -11,6 +11,7 @@ class NetBoxDeviceProperties:
     device_type: str
     platform: str
     product_model: str
+    primary_ip: str
 
     def __sub__(self, other: "NetBoxDeviceProperties") -> set[str]:
         return {

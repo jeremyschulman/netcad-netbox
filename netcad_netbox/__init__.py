@@ -19,3 +19,4 @@
 
 from .plugin import plugin_version, plugin_description, plugin_init
 from .netbox_design_config import NetBoxDesignConfig, NetBoxDeviceProperties
+from netcad_netbox import cli

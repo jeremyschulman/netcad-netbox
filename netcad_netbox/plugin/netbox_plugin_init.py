@@ -16,7 +16,6 @@ from pydantic import ValidationError
 
 from .netbox_plugin_config_def import NetBoxPluginConfig
 from .netbox_plugin_globals import g_netbox
-from netcad_netbox import cli
 
 
 def plugin_init(plugin_def: dict):

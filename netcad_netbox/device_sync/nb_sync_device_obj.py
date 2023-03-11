@@ -44,9 +44,11 @@ async def nb_sync_existing_device_obj(
     device_type_data = res.json()
 
     dev_platform_obj = nb_dev_obj.get("platform") or {}
+    dev_pri_ip_obj = nb_dev_obj["primary_ip"] or {}
 
     dev_props_has = NetBoxDeviceProperties(
         status=nb_dev_obj["status"]["value"],
+        primary_ip=dev_pri_ip_obj.get("address") or "",
         device_type=nb_dev_obj["device_type"]["display"],
         device_role=nb_dev_obj["device_role"]["slug"],
         platform=dev_platform_obj.get("slug") or "",
@@ -63,6 +65,18 @@ async def nb_sync_existing_device_obj(
         log.info(f"{dev.name}: NetBox is correct, no further action.")
         return
 
+    await _patch_nb_record(nb_api, dev, dev_props_design, nb_dev_obj, mismatch_fields)
+
+
+async def _patch_nb_record(
+    nb_api,
+    dev,
+    dev_props_design,
+    nb_dev_obj,
+    mismatch_fields,
+):
+    log = get_logger()
+
     log.info(f'{dev.name}: need to update {", ".join(mismatch_fields)}')
 
     patch_nb_dev = dict(
@@ -70,7 +84,7 @@ async def nb_sync_existing_device_obj(
         site=nb_dev_obj["site"]["id"],
         device_type=nb_dev_obj["device_type"]["id"],
         device_role=nb_dev_obj["device_role"]["id"],
-        platform=dev_platform_obj.get("id"),
+        platform=(nb_dev_obj["platform"] or {}).get("id"),
     )
 
     for field in mismatch_fields:
