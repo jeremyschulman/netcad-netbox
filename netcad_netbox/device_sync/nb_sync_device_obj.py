@@ -97,7 +97,7 @@ async def nb_create_new_device_obj(
     res = await nb_api.op.dcim_devices_create(json=new_dev_obj)
     if res.status_code == HTTPStatus.CREATED:
         log.info(f"{dev.name}: Created in NetBox OK.")
-        return res
+        return res.json()
 
     log.error(f"{dev.name}: Failed to create record in NetBox: {res.text}")
     return None
