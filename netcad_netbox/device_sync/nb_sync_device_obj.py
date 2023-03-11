@@ -50,13 +50,19 @@ async def nb_sync_device_obj(nb_api: NetboxClient, dev: Device, status: str):
         return
 
     if not (nb_dev_rec := first(res.json()["results"])):
-        await nb_create_new_device_obj(nb_api, dev, dev_props_design)
-        return
+        return await nb_create_new_device_obj(nb_api, dev, dev_props_design)
 
     # if we are here, then the device record exists, and we should check to see
     # if the properties match our expected values.
 
-    await nb_sync_existing_device_obj(nb_api, dev, status, nb_dev_rec)
+    return await nb_sync_existing_device_obj(nb_api, dev, status, nb_dev_rec)
+
+
+# =============================================================================
+#
+#                    Push / Create New Device Record
+#
+# =============================================================================
 
 
 async def nb_create_new_device_obj(
@@ -65,17 +71,6 @@ async def nb_create_new_device_obj(
     """
     Creates a new NetBox device record.  If ok, then this function returns the
     new record object.  If not OK, then this function returns None.
-
-    Parameters
-    ----------
-    nb_api:
-        The instance to the NetBox API
-
-    dev:
-        The design device instance
-
-    dev_props_design:
-        The properties for the NetBox device record
     """
 
     log = get_logger()
@@ -99,8 +94,8 @@ async def nb_create_new_device_obj(
         platform=os_rec["id"],
     )
 
-    res = nb_api.op.dcim_devices_create(json=new_dev_obj)
-    if res.status_code == HTTPStatus:
+    res = await nb_api.op.dcim_devices_create(json=new_dev_obj)
+    if res.status_code == HTTPStatus.CREATED:
         log.info(f"{dev.name}: Created in NetBox OK.")
         return res
 
@@ -117,7 +112,12 @@ async def nb_create_new_device_obj(
 
 async def nb_sync_existing_device_obj(
     nb_api: NetboxClient, dev: Device, status: str, nb_dev_obj: dict
-):
+) -> dict | None:
+    """
+    Updates the existing NetBox record with the property values from the
+    design. If this process is OK, this function returns the updated NetBox
+    record. If this process fails, then this funciton returns None.
+    """
     log = get_logger()
     log.info(f"{dev.name}: Sync existing NetBox device record: ")
 
@@ -145,9 +145,11 @@ async def nb_sync_existing_device_obj(
     if not mismatch_fields:
         # then nothing to do, all is good.  log the information and return
         log.info(f"{dev.name}: NetBox is correct, no further action.")
-        return
+        return nb_dev_obj
 
-    await _patch_nb_record(nb_api, dev, dev_props_design, nb_dev_obj, mismatch_fields)
+    return await _patch_nb_record(
+        nb_api, dev, dev_props_design, nb_dev_obj, mismatch_fields
+    )
 
 
 async def _patch_nb_record(
@@ -156,7 +158,7 @@ async def _patch_nb_record(
     dev_props_design,
     nb_dev_obj,
     mismatch_fields,
-):
+) -> dict | None:
     log = get_logger()
 
     log.info(f'{dev.name}: need to update {", ".join(mismatch_fields)}')
@@ -202,7 +204,10 @@ async def _patch_nb_record(
     res: Response = await nb_api.op.dcim_devices_partial_update(
         id=nb_dev_obj["id"], json=patch_nb_dev
     )
+
     if res.status_code == HTTPStatus.OK:
         log.info(f"{dev.name}: NetBox device record update OK.")
-    else:
-        log.error(f"{dev.name}: NetBox device record update failed: {res.text}")
+        return res.json()
+
+    log.error(f"{dev.name}: NetBox device record update failed: {res.text}")
+    return None

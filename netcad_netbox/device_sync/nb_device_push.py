@@ -24,7 +24,13 @@ async def nb_device_push(dev: Device, status: str):
     """
     log = get_logger()
     log.info(f"{dev.name}: Pushing device into NetBox ...")
+
     async with NetboxClient() as nb_api:
-        await device_sync.nb_sync_device_obj(nb_api, dev, status)
+        nb_dev_rec = await device_sync.nb_sync_device_obj(nb_api, dev, status)
+
+        if not nb_dev_rec:
+            log.error(f"{dev.name}: aborting further NetBox push due to prior errors.")
+
+        await device_sync.nb_sync_device_interface_objs(nb_api, dev, nb_dev_rec)
 
     log.info(f"{dev.name}: Pushing device into NetBox completed.")
