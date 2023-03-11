@@ -19,14 +19,14 @@ from tenacity import retry, wait_exponential
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from netinfra_tools.pager import Pager
-from netinfra_tools.swagger import SwaggerExecutor
+from .swagger import SwaggerExecutor
+from .pager import Pager
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["NetboxClient", "Pager"]
+__all__ = ["NetboxClient"]
 
 
 # -----------------------------------------------------------------------------

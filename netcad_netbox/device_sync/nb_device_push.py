@@ -1,6 +1,9 @@
 from netcad.device import Device
 from netcad.logger import get_logger
 
+from netcad_netbox.aionetbox import NetboxClient
+from netcad_netbox import device_sync
+
 
 async def nb_device_push(dev: Device, status: str):
     """
@@ -20,5 +23,8 @@ async def nb_device_push(dev: Device, status: str):
         The expected NetBox device status (slug), for example "active" or "planning"
     """
     log = get_logger()
-    log.info(f"START: Pushing device {dev.name} into NetBox ...")
-    log.info(f"DONE: Pushing device {dev.name} into NetBox completed.")
+    log.info(f"{dev.name}: Pushing device  into NetBox ...")
+    async with NetboxClient() as nb_api:
+        await device_sync.nb_sync_device_obj(nb_api, dev, status)
+
+    log.info(f"{dev.name}: Pushing device into NetBox completed.")
