@@ -19,18 +19,33 @@ import httpx
 
 
 class SwaggerExecutor:
+    """
+    Allows an HTTPX AsyncClient to use an API swagger specification file so
+    that calls can be made using the "operational ID" name, rather than having
+    to remember the specifc API paths.
+
+    For example:
+        client.op.dcim_devices_list(params=dict(site='my-site-slug'))
+        client.op.dcim_cables_delete(id=123)
+        client.op.dcim_cables_create(json=new_cable_payload)
+    """
+
     def __init__(
         self,
         client: httpx.AsyncClient,
         specfile: Optional[str] = None,
         specdata: Optional[dict] = None,
     ):
+        """
+        Constructor to bind the swagger engine to the HTTPX AsyncClient.
+        """
         self.client = client
         self.oper_id_specs = dict()
         self.spec_data: dict = specdata or json.load(open(specfile))
         self.load(self.spec_data)
 
     def load(self, spec_data: dict):
+        """Used to load the swagger data for future processing"""
         for api_path, api_body in spec_data["paths"].items():
             for path_op, path_body in api_body.items():
                 if not isinstance(path_body, dict):
@@ -44,6 +59,7 @@ class SwaggerExecutor:
                 self.oper_id_specs[oper_id] = (path_op, api_path)
 
     def get_oper_spec(self, oper_id):
+        """retruns the API spec for the given operational-ID"""
         if not (oper_data := self.oper_id_specs.get(oper_id)):
             raise ValueError(f"Unkknown operational-id: {oper_id}")
 
@@ -75,6 +91,27 @@ class SwaggerExecutor:
         # the URL path parameters can be passed in by the Caller.
 
         async def call_with_args(**kwargs):
+            """
+            Invokes the given API with the provided kwargs.
+
+            Other Parameters
+            ----------------
+            The keyword args are as they are defined in the specific API
+            specification. This function will use the API spec to determine if
+            the arg is part of the URL path or not.
+
+            For exmaple, if an API has a URL with the <id> value, then one of
+            the kwargs would be:
+                op.dcim_cables_delete(id=<somevalue>).
+
+            For URLs with query params, use the `params` keyword with a dict
+            value.  For exmample:
+                op.dcim_interfaces_list(params=dict(device_id=1, name='eth7'))
+
+            For URLs that take a body payload, use the `json` kwarg, same as
+            httpx, for example:
+                op.dcim_interfaces_create(json=new_body_payload)
+            """
             path_data = self.spec_data["paths"][oper_path]
 
             oper_params = path_data[oper_cmd].get("parameters", []) + path_data.get(

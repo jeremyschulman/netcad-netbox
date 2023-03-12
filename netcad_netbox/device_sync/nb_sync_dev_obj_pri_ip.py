@@ -12,12 +12,33 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# -----------------------------------------------------------------------------
+# Public Imports
+# -----------------------------------------------------------------------------
+
+from httpx import Response
 from netcad.device import Device
 from netcad.logger import get_logger
 
-from httpx import Response
+# -----------------------------------------------------------------------------
+# Private Imports
+# -----------------------------------------------------------------------------
+
 
 from netcad_netbox.aionetbox import NetboxClient
+
+# -----------------------------------------------------------------------------
+# Exports
+# -----------------------------------------------------------------------------
+
+__all__ = ["nb_sync_device_obj_primary_ip"]
+
+
+# -----------------------------------------------------------------------------
+#
+#                                 CODE BEGINS
+#
+# -----------------------------------------------------------------------------
 
 
 async def nb_sync_device_obj_primary_ip(
@@ -26,6 +47,24 @@ async def nb_sync_device_obj_primary_ip(
     nb_dev_rec: dict,
     nb_if_ipaddr_map: dict[tuple[str, str], dict],
 ):
+    """
+    This function is used to sync the NetBox device primary IP value from the design.
+
+    Parameters
+    ----------
+    nb_api:
+        Instance to the NetBox REST API.
+
+    dev:
+        Instance to the design device
+
+    nb_dev_rec
+        The NetBox device record
+
+    nb_if_ipaddr_map
+        The map of NetBox IP address records, key=(device-name,
+        interface-name), value=NetBox IP record.
+    """
     log = get_logger()
 
     pri_if_obj = dev.primary_ip.interface

@@ -12,22 +12,58 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# -----------------------------------------------------------------------------
+# System Imports
+# -----------------------------------------------------------------------------
+
 from typing import Iterable
-from http import HTTPStatus
+
+# -----------------------------------------------------------------------------
+# Public Imports
+# -----------------------------------------------------------------------------
 
 from httpx import Response
-
 from netcad.logger import get_logger
 from netcad.device import Device
+
+# -----------------------------------------------------------------------------
+# Private Imports
+# -----------------------------------------------------------------------------
 
 from netcad_netbox.aionetbox import NetboxClient
 from netcad_netbox.netbox_map_if_type import netbox_map_interface_type
 from netcad_netbox.netbox_design_config import NetBoxInterfaceProperties
 
+# -----------------------------------------------------------------------------
+# Exports
+# -----------------------------------------------------------------------------
+
+__all__ = ["nb_sync_device_interface_objs"]
+
+# -----------------------------------------------------------------------------
+#
+#                                 CODE BEGINS
+#
+# -----------------------------------------------------------------------------
+
 
 async def nb_sync_device_interface_objs(
     nb_api: NetboxClient, dev: Device, nb_dev_rec: dict
 ):
+    """
+    This function is used to sync design device interfaces into NetBox.
+
+    Parameters
+    ----------
+    nb_api:
+        Instance to the NetBox REST API.
+
+    dev:
+        Instance to the design device.
+
+    nb_dev_rec:
+        The NetBox device record
+    """
     res: Response = await nb_api.op.dcim_interfaces_list(
         params=dict(device_id=nb_dev_rec["id"])
     )
@@ -73,6 +109,9 @@ async def nb_sync_device_interface_objs(
 async def _create_interfaces(
     nb_api: NetboxClient, dev: Device, add_if_names: set[str], nb_dev_id: int
 ) -> dict[str, dict]:
+    """
+    Used to add NetBox interface records for the given device.
+    """
     log = get_logger()
     new_if_map = dict()
 
@@ -89,7 +128,7 @@ async def _create_interfaces(
         )
 
         res: Response = await nb_api.op.dcim_interfaces_create(json=new_if_body)
-        if res.status_code != HTTPStatus.CREATED:
+        if res.is_error:
             log.error(f"{dev.name}: {if_name}: failed to be created: {res.text}")
             continue
 
@@ -160,7 +199,7 @@ async def _sync_existing_interfaces(
             id=nb_if_rec["id"], json=patch_if_body
         )
 
-        if res.status_code != HTTPStatus.OK:
+        if res.is_error:
             log.error(f"{dev.name}:{if_name} update failed: {res.text}")
             continue
 
@@ -180,6 +219,9 @@ async def _sync_existing_interfaces(
 async def _delete_interfaces(
     nb_api: NetboxClient, dev: Device, del_if_recs: Iterable[dict]
 ):
+    """
+    Used to remove interfaces from NetBox.
+    """
     # TODO: need to implement this; but need to consider Non-Exclusively
     #       manaeged devices.
     pass
