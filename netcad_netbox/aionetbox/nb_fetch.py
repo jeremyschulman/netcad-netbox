@@ -40,3 +40,23 @@ async def fetch_device_type(api: NetboxClient, device_type: str):
         return device_type_rec
 
     raise RuntimeError(f"NetBox missing device-type {device_type}, please resolve.")
+
+
+async def fetch_device_ipaddrs(api: NetboxClient, device_id: int) -> list[dict]:
+    """
+    Retrieves all IP address records for the given device.  If the device does not have
+    any IP addresses assigned, then the empty-list is returned.
+
+    Parameters
+    ----------
+    api:
+        The instance to the NetBox API client.
+
+    device_id:
+        The NetBox device-ID value.
+    """
+    res: Response = await api.op.ipam_ip_addresses_list(
+        params=dict(device_id=device_id)
+    )
+    res.raise_for_status()
+    return res.json()["results"]

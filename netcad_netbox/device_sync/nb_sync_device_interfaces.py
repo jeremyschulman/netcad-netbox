@@ -43,6 +43,7 @@ async def nb_sync_device_interface_objs(
     upd_if_map = await _sync_existing_interfaces(
         nb_api, dev, chk_if_recs=map(nb_if_name_map.get, chk_if_names)
     )
+
     nb_if_name_map.update(upd_if_map)
 
     return nb_if_name_map
@@ -165,4 +166,6 @@ async def _sync_existing_interfaces(
 async def _delete_interfaces(
     nb_api: NetboxClient, dev: Device, del_if_recs: Iterable[dict]
 ):
+    # TODO: need to implement this; but need to consider Non-Exclusively
+    #       manaeged devices.
     pass
