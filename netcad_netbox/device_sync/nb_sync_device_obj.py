@@ -12,11 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# -----------------------------------------------------------------------------
-# System Imports
-# -----------------------------------------------------------------------------
-
-from http import HTTPStatus
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -117,13 +112,13 @@ async def nb_create_new_device_obj(
         platform=os_rec["id"],
     )
 
-    res = await nb_api.op.dcim_devices_create(json=new_dev_obj)
-    if res.status_code == HTTPStatus.CREATED:
-        log.info(f"{dev.name}: Created in NetBox OK.")
-        return res.json()
+    res: Response = await nb_api.op.dcim_devices_create(json=new_dev_obj)
+    if res.is_error:
+        log.error(f"{dev.name}: Failed to create record in NetBox: {res.text}")
+        return None
 
-    log.error(f"{dev.name}: Failed to create record in NetBox: {res.text}")
-    return None
+    log.info(f"{dev.name}: Created in NetBox OK.")
+    return res.json()
 
 
 # =============================================================================
@@ -233,9 +228,9 @@ async def _patch_nb_record(
         id=nb_dev_obj["id"], json=patch_nb_dev
     )
 
-    if res.status_code == HTTPStatus.OK:
-        log.info(f"{dev.name}: NetBox device record update OK.")
-        return res.json()
+    if res.is_error:
+        log.error(f"{dev.name}: NetBox device record update failed: {res.text}")
+        return None
 
-    log.error(f"{dev.name}: NetBox device record update failed: {res.text}")
-    return None
+    log.info(f"{dev.name}: NetBox device record update OK.")
+    return res.json()

@@ -15,7 +15,6 @@
 from netcad.device import Device
 from netcad.logger import get_logger
 
-from http import HTTPStatus
 from httpx import Response
 
 from netcad_netbox.aionetbox import NetboxClient
@@ -58,7 +57,7 @@ async def nb_sync_device_obj_primary_ip(
     res: Response = await nb_api.op.dcim_devices_partial_update(
         id=nb_dev_rec["id"], json=dict(primary_ip4=nb_ip_rec["id"])
     )
-    if res.status_code != HTTPStatus.OK:
+    if res.is_error:
         log.error(
             f"{dev.name}: failed to assign IP {dsn_pri_if_ipaddr} on "
             f"interface {if_name} as primary IP: {res.text}"

@@ -14,7 +14,6 @@
 
 from collections import defaultdict
 
-from http import HTTPStatus
 from httpx import Response
 
 from netcad.device import Device
@@ -106,7 +105,7 @@ async def _add_lag_members(
             id=nb_if_map[if_name]["id"], json=dict(lag=lag_id)
         )
 
-        if res.status_code == HTTPStatus.OK:
+        if res.is_error:
             log.info(f"{dev.name}:{if_name} added to LAG {lag_name} OK")
             continue
 
@@ -131,8 +130,10 @@ async def _del_lag_members(
             id=nb_if_map[if_name]["id"], json=dict(lag=None)
         )
 
-        if res.status_code == HTTPStatus.OK:
-            log.info(f"{dev.name}:{if_name} removed from LAG {lag_name} OK")
+        if res.is_error:
+            log.error(
+                f"{dev.name}:{if_name} failed remove from LAG {lag_name}: {res.text}"
+            )
             continue
 
-        log.error(f"{dev.name}:{if_name} failed remove from LAG {lag_name}: {res.text}")
+        log.info(f"{dev.name}:{if_name} removed from LAG {lag_name} OK")
