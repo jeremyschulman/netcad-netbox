@@ -36,8 +36,13 @@ async def nb_device_push(dev: Device, status: str):
         )
 
         await device_sync.nb_sync_device_lag_objs(nb_api, dev, nb_dev_if_map)
-        await device_sync.nb_sync_device_ipaddr_objs(
+
+        nb_dev_if_ipaddr_map = await device_sync.nb_sync_device_ipaddr_objs(
             nb_api, dev, nb_dev_rec, nb_dev_if_map
+        )
+
+        await device_sync.nb_sync_device_obj_primary_ip(
+            nb_api, dev, nb_dev_rec, nb_dev_if_ipaddr_map
         )
 
     log.info(f"{dev.name}: Pushing device into NetBox completed.")

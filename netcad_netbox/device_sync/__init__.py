@@ -3,3 +3,4 @@ from .nb_sync_device_obj import nb_sync_device_obj
 from .nb_sync_device_interfaces import nb_sync_device_interface_objs
 from .nb_sync_device_lags import nb_sync_device_lag_objs
 from .nb_sync_device_ipaddrs import nb_sync_device_ipaddr_objs
+from .nb_sync_dev_obj_pri_ip import nb_sync_device_obj_primary_ip
