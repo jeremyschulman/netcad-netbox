@@ -31,12 +31,21 @@ async def nb_sync_device_interface_objs(
     await _delete_interfaces(
         nb_api, dev, del_if_recs=map(nb_if_name_map.get, unx_if_names)
     )
-    await _create_interfaces(
+
+    for if_name in unx_if_names:
+        del nb_if_name_map[if_name]
+
+    new_if_map = await _create_interfaces(
         nb_api, dev, nb_dev_id=nb_dev_rec["id"], add_if_names=add_if_names
     )
-    await _sync_existing_interfaces(
+    nb_if_name_map.update(new_if_map)
+
+    upd_if_map = await _sync_existing_interfaces(
         nb_api, dev, chk_if_recs=map(nb_if_name_map.get, chk_if_names)
     )
+    nb_if_name_map.update(upd_if_map)
+
+    return nb_if_name_map
 
 
 # -----------------------------------------------------------------------------
@@ -48,7 +57,7 @@ async def nb_sync_device_interface_objs(
 
 async def _create_interfaces(
     nb_api: NetboxClient, dev: Device, add_if_names: set[str], nb_dev_id: int
-):
+) -> dict[str, dict]:
     log = get_logger()
     new_if_map = dict()
 
@@ -71,6 +80,8 @@ async def _create_interfaces(
 
         log.info(f"{dev.name}: {if_name}: created OK.")
         new_if_map[if_name] = res.json()
+
+    return new_if_map
 
 
 # -----------------------------------------------------------------------------

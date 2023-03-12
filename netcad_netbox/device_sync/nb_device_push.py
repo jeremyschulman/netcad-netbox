@@ -31,6 +31,10 @@ async def nb_device_push(dev: Device, status: str):
         if not nb_dev_rec:
             log.error(f"{dev.name}: aborting further NetBox push due to prior errors.")
 
-        await device_sync.nb_sync_device_interface_objs(nb_api, dev, nb_dev_rec)
+        nb_dev_if_map = await device_sync.nb_sync_device_interface_objs(
+            nb_api, dev, nb_dev_rec
+        )
+
+        await device_sync.nb_sync_device_lag_objs(nb_api, dev, nb_dev_if_map)
 
     log.info(f"{dev.name}: Pushing device into NetBox completed.")
