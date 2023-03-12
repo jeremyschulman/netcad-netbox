@@ -12,6 +12,19 @@ The following design elements are syndicated to NetBox:
  * device interface IP addresss
  * device cabling
 
+# Usage
+
+At present there is only one command that is used to "push" the design elements
+into NetBox.  There are a nubmer of command options, to select specific devices
+or designs.
+
+Presuming you have your `NETCAD_DESIGN` variable set, you can push all device
+information into NetBox using the command:
+
+```shell
+netcad netbox push
+```
+
 # Installation
 
 ```shell
