@@ -133,6 +133,7 @@ class NetboxClient(AsyncClient):
             stop=stop_after_attempt(3),
         )
         async def _do_rqst():
+            """do request with retrying"""
             res = await super(NetboxClient, self).request(*vargs, **kwargs)
 
             if res.status_code in [500]:

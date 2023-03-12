@@ -35,6 +35,15 @@ NETBOX_IF_TYPE_MAP = MappingProxyType(
 
 
 def netbox_map_interface_type(iface_obj: DeviceInterface) -> str:
+    """
+    This function is used to return the NetBox interface "type" string that is
+    associated to the design device interface object.
+
+    Parameters
+    ----------
+    iface_obj:
+        The design device interface object.
+    """
     # if the interface is not used, that is it does not have a profile
     # assigned, then examine the interface spec from the device-spec to
     # determine the interface type. if there is no interface type in the

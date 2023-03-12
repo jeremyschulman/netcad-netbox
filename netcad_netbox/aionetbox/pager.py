@@ -71,6 +71,7 @@ class Pager:
     """
 
     def __init__(self, paging_client: "PagableClient", page_sz: Optional[int] = None):
+        """Constructor"""
         self.page_sz = page_sz
         self.tasks: Optional[List[Coroutine]] = list()
         self._paging_client = paging_client
@@ -83,6 +84,7 @@ class Pager:
         self.data: Optional[Sequence] = None
 
     async def setup(self, call, params):
+        """setup to determine total pages"""
         await self._paging_client.pager_setup(self, call, params=params)
         self.total_pages = len(self.tasks)
         return self
@@ -114,6 +116,7 @@ class Pager:
         pager = self
 
         async def _await_all_pages():
+            """get all pages of data concurrently"""
             pages = await asyncio.gather(*self.tasks)
             self.data = list()
             for page in pages:
@@ -125,6 +128,7 @@ class Pager:
         return _await_all_pages().__await__()
 
     async def __anext__(self):
+        """get next page"""
         if not (job := next(self._iter, None)):
             raise StopAsyncIteration
 
@@ -134,6 +138,7 @@ class Pager:
         return self.data
 
     def __aiter__(self):
+        """create async iterator by running jobs through as-completed"""
         self._iter = asyncio.as_completed(self.tasks)
         return self
 

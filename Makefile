@@ -17,6 +17,10 @@ setup.py:
 requirements.txt:
 	poetry export --without-hashes > requirements.txt
 
+.PHONY: doc-check
+doc-check:
+	interrogate -vvv netcad_netbox --omit-covered-files
+
 clean:
 	rm -rf dist *.egg-info .pytest_cache
 	rm -f requirements.txt setup.py
