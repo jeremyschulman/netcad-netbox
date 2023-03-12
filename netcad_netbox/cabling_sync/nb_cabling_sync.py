@@ -12,7 +12,7 @@ from netcad_netbox.aionetbox import NetboxClient
 
 async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
     log = get_logger()
-
+    log.info("Checking cabling ... ")
     # -------------------------------------------------------------------------
     # Formulate the design cabling map from the list of provided devices.
     # -------------------------------------------------------------------------
@@ -97,10 +97,16 @@ async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
         del_cables.add(rmt_key)
         add_cables.add((lcl_key, rmt_key))
 
+    if not del_cables or add_cables:
+        log.info("No cable changes required.")
+        return
+
     if del_cables:
+        log.info(f"Removing {len(del_cables)} cables ...")
         await _del_cabling(nb_api, map(dev_if_rec_map.get, del_cables))
 
     if add_cables:
+        log.info(f"Adding {len(add_cables)} cables ...")
         await _add_cabling(nb_api, add_cables, dev_if_rec_map)
 
 
