@@ -27,7 +27,7 @@ from pathlib import Path
 
 import httpx
 from httpx import AsyncClient
-from tenacity import retry, wait_exponential
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -53,12 +53,32 @@ _g_module_dir = Path(__file__).parent
 
 
 class NetboxClient(AsyncClient):
+    """
+    An asyncio client to the NetBox REST API.  Uses OpenAPI/swagger
+    definitions.
+
+    The following ENV are defined to pass connection information.
+        NETBOX_ADDR = https://<url-to-your-netbox-server>
+        NETBOX_TOKEN = <API-token-value>
+    """
+
     ENV_VARS = ["NETBOX_ADDR", "NETBOX_TOKEN"]
     DEFAULT_TIMEOUT = 60
     DEFAULT_PAGE_SZ = 1000
     API_RATE_LIMIT = 100
 
     def __init__(self, base_url=None, token=None, **kwargs):
+        """
+        Construction for NetBox client.  If base_url and/or token are not
+        provided, then use the ENV variables.
+
+        Parameters
+        ----------
+        base_url: httpx.URL | str
+        token: str
+        kwargs:
+            Any other httpx.AsyncClient constructor kwargs
+        """
         try:
             url = base_url or environ["NETBOX_ADDR"]
             token = token or environ["NETBOX_TOKEN"]
@@ -85,10 +105,15 @@ class NetboxClient(AsyncClient):
 
     @staticmethod
     def parse_qfilter(expr: str) -> Dict:
+        """
+        parse a CLI query filter that is in the form of:
+            keyword:value[,keyword:value,...]
+        """
         return dict(item.split(":", maxsplit=1) for item in expr.split(","))  # noqa
 
     @staticmethod
     def response_items(resp: dict):
+        """helper to get results from the response body"""
         return resp["results"]
 
     # -------------------------------------------------------------------------
@@ -98,7 +123,15 @@ class NetboxClient(AsyncClient):
     # -------------------------------------------------------------------------
 
     async def request(self, *vargs, **kwargs):
-        @retry(wait=wait_exponential(multiplier=1, min=4, max=10))
+        """
+        overloads request method to retry on failures and to alllow of
+        API concurrency up to max semaphore value.
+        """
+
+        @retry(
+            wait=wait_exponential(multiplier=1, min=4, max=10),
+            stop=stop_after_attempt(3),
+        )
         async def _do_rqst():
             res = await super(NetboxClient, self).request(*vargs, **kwargs)
 

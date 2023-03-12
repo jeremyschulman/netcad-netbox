@@ -12,16 +12,40 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# -----------------------------------------------------------------------------
+# System Imports
+# -----------------------------------------------------------------------------
+
 import asyncio
 from typing import Iterable
 
-from http import HTTPStatus
+# -----------------------------------------------------------------------------
+# Public Imports
+# -----------------------------------------------------------------------------
+
 from httpx import Response
 from first import first
 
 from netcad.logger import get_logger
 from netcad.device import Device, DeviceInterface
+
+# -----------------------------------------------------------------------------
+# Priavte Imports
+# -----------------------------------------------------------------------------
+
 from netcad_netbox.aionetbox import NetboxClient
+
+# -----------------------------------------------------------------------------
+# Exports
+# -----------------------------------------------------------------------------
+
+__all__ = ["nb_cabling_sync"]
+
+# -----------------------------------------------------------------------------
+#
+#                              CODE BEGINS
+#
+# -----------------------------------------------------------------------------
 
 
 async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
@@ -76,7 +100,14 @@ async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
 
     each_res: Response
     for each_res in dev_if_rec_resps:
-        if_rec = first(each_res.json()["results"])
+        if not (if_rec := first(each_res.json()["results"])):
+            u_parms = each_res.request.url.params
+            r_dev_n, r_if_n = u_parms["device"], u_parms["name"]
+            log.error(
+                f"{r_dev_n}:{r_if_n} interface missing from NetBox, please check."
+            )
+            continue
+
         dev_if_rec_map[(if_rec["device"]["name"], if_rec["name"])] = if_rec
 
     # -------------------------------------------------------------------------
@@ -87,31 +118,45 @@ async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
     del_cables = set()
 
     for lcl_key, rmt_key in dev_cables:
-        lcl_if_rec = dev_if_rec_map[lcl_key]
+        lcl_if_rec = dev_if_rec_map.get(lcl_key)
+        rmt_if_rec = dev_if_rec_map.get(rmt_key)
 
-        # if there is no cable yet, then add one.
+        if not all((lcl_if_rec, rmt_if_rec)):
+            continue
 
-        if not lcl_if_rec["cable"]:
+        # check for "dangling cables" that have no link peers ... if these
+        # exist, then remove the cable.
+
+        if rmt_if_rec["cable"] and not rmt_if_rec["link_peers"]:
+            del_cables.add(rmt_key)
+
+        if lcl_if_rec["cable"] and not lcl_if_rec["link_peers"]:
+            del_cables.add(lcl_key)
+
+        # if the link-peer does not exist then add
+
+        if not (has_link_peer_obj := first(lcl_if_rec["link_peers"])):
             add_cables.add((lcl_key, rmt_key))
             continue
 
-        # if there is a cable, but it is connected to the wrong peer, then we
-        # need to remove it, and add the correct one.
-
-        has_link_peer_obj = lcl_if_rec["link_peers"][0]
         has_link_peer_key = (
             has_link_peer_obj["device"]["name"],
             has_link_peer_obj["name"],
         )
 
+        # if the link-peer exists and is correct, then no further action is
+        # needed
+
         if has_link_peer_key == rmt_key:
             continue
+
+        # if here, then the link-peer exists but is connected to the wrong place.
 
         del_cables.add(lcl_key)
         del_cables.add(rmt_key)
         add_cables.add((lcl_key, rmt_key))
 
-    if not del_cables or add_cables:
+    if not (del_cables or add_cables):
         log.info("No cable changes required.")
         return
 
@@ -157,7 +202,7 @@ async def _add_cabling(
         lcl_devn, lcl_ifn = lcl_key
         rmt_devn, rmt_ifn = rmt_key
 
-        if res.status_code != HTTPStatus.CREATED:
+        if res.is_error:
             log.error(
                 f"{lcl_devn}:{lcl_ifn} cabling {rmt_devn}:{rmt_ifn} failed: {res.text}"
             )
@@ -183,7 +228,7 @@ async def _del_cabling(nb_api: NetboxClient, del_cable_if_recs: Iterable[dict]):
 
         res: Response = await nb_api.op.dcim_cables_delete(id=cable_id)
 
-        if res.status_code != HTTPStatus.OK:
+        if res.is_error:
             log.error(f"{dev_name}:{if_name} failed to remove cable: {res.text}")
             continue
 
