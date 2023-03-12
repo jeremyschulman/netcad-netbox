@@ -48,6 +48,8 @@ def cli_nb_push(devices: Tuple[str], designs: Tuple[str], status: str):
         return
 
     async def run():
+        """run the process in an asyncio context"""
+
         async with NetboxClient() as nb_api:
             # push each of the devices into NetBox.
             await asyncio.gather(

@@ -49,6 +49,11 @@ __all__ = ["nb_cabling_sync"]
 
 
 async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
+    """
+    This function is used to ensure the NetBox cabling is correct relative to
+    the design device cabling map.
+    """
+
     log = get_logger()
     log.info("Checking cabling ... ")
     # -------------------------------------------------------------------------
@@ -56,6 +61,7 @@ async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
     # -------------------------------------------------------------------------
 
     def cable_key(if_obj: DeviceInterface):
+        """sorted key for cable-map"""
         _if_key = (if_obj.device.name, if_obj.name)
         _rmt_if_obj: DeviceInterface = if_obj.cable_peer
         _rmt_key = (_rmt_if_obj.device.name, _rmt_if_obj.name)
@@ -181,6 +187,22 @@ async def _add_cabling(
     add_cables: set[tuple[tuple[str, str], tuple[str, str]]],
     dev_if_rec_map: dict[tuple[str, str], dict],
 ):
+    """
+    This function is used to add the issing cabling that is defined in the
+    NetCAD design, but not present in NetBox.
+
+    Parameters
+    ----------
+    nb_api:
+        Instance to the NetBox API.
+
+    add_cables:
+        The set of cabling end-point keys, each (device-name, interface-name)
+
+    dev_if_rec_map:
+        The dictionary of NetBox device interface records that are keyed by the
+        tuple (device-name, interface-name)
+    """
     log = get_logger()
 
     for lcl_key, rmt_key in add_cables:
@@ -219,6 +241,20 @@ async def _add_cabling(
 
 
 async def _del_cabling(nb_api: NetboxClient, del_cable_if_recs: Iterable[dict]):
+    """
+    This function is used to remove unwanted cabling that is not defined in the
+    NetCAD design, but is present in NetBox.
+
+    Parameters
+    ----------
+    nb_api:
+        Instance to the NetBox API.
+
+    del_cable_if_recs:
+        The NetBox interface records for which a cable exists and needs to be
+        removed.
+    """
+
     log = get_logger()
 
     for if_rec in del_cable_if_recs:
