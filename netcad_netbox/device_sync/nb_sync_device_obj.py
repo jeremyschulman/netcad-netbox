@@ -198,7 +198,7 @@ async def _patch_nb_record(
             case "product_model":
                 log.error(
                     f'{dev.name}: device-type "{dev_props_design.device_type}" matches, '
-                    f'"but not product-model "{dev_props_design.product_model}", check NetBox.'
+                    f'but not product-model "{dev_props_design.product_model}", check NetBox.'
                 )
 
     res: Response = await nb_api.op.dcim_devices_partial_update(

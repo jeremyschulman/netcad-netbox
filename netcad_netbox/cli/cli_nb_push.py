@@ -30,4 +30,9 @@ def cli_nb_push(devices: Tuple[str], designs: Tuple[str], status: str):
         log.error("No devices located in the given designs")
         return
 
-    asyncio.run(nb_device_push(device_objs[0], status=status))
+    async def run():
+        await asyncio.gather(
+            *{nb_device_push(dev_obj, status=status) for dev_obj in device_objs}
+        )
+
+    asyncio.run(run())
