@@ -34,6 +34,7 @@ class NetBoxDeviceProperties:
     """
     Device properites that we want to sync with NetBox
     """
+
     site: str
     status: str
     device_role: str
@@ -52,6 +53,7 @@ class NetBoxInterfaceProperties:
     """
     Interface properties that we want to sync with NetBox
     """
+
     enabled: bool
     description: str
     if_type: str
@@ -71,6 +73,7 @@ class NetBoxDesignConfig:
         design.config['netcad_netbox] = <instance to this config>
 
     """
+
     def __init__(self, design: Design):
         """
         Constructor, should be called during the deisgn build process.

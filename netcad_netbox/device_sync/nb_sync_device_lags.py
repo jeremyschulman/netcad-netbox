@@ -94,6 +94,10 @@ async def _add_lag_members(
     lag_name: str,
     add_if_names: set[str],
 ):
+    """
+    Called when interfaces need to be added into LAGs.
+    """
+
     log = get_logger()
     lag_id = nb_if_map[lag_name]["id"]
 
@@ -116,6 +120,10 @@ async def _del_lag_members(
     lag_name: str,
     del_if_names: set[str],
 ):
+    """
+    Called when interfaces need to be removed from LAGs.
+    """
+
     log = get_logger()
 
     for if_name in del_if_names:

@@ -28,6 +28,23 @@ from netcad_netbox.aionetbox.nb_fetch import fetch_device_ipaddrs
 async def nb_sync_device_ipaddr_objs(
     nb_api: NetboxClient, device: Device, nb_dev_rec: dict, nb_if_map: dict[str, dict]
 ):
+    """
+    This function is used to sync interface IP adddress assignements into NetBox.
+
+    Parameters
+    ----------
+    nb_api
+    device:
+        The design device instance.
+
+    nb_dev_rec:
+        The NetBox device record for this device.
+
+    nb_if_map:
+        The NetBox interfaces for this device, where key=if-name, and
+        value=NetBox interface record.
+    """
+
     # -------------------------------------------------------------------------
     # get the IP addresses assigned ot this device in NetBox
     # -------------------------------------------------------------------------
@@ -50,18 +67,8 @@ async def nb_sync_device_ipaddr_objs(
         if isinstance(iface.profile, InterfaceL3) and iface.profile.if_ipaddr
     }
 
-    # -------------------------------------------------------------------------
-    # Process new IP addresses
-    # -------------------------------------------------------------------------
-
     has_keys = set(if_ipaddr_map_has)
     exp_keys = set(if_ipaddr_map_exp)
-
-    if add_if_ipaddrs := (exp_keys - has_keys):
-        new_if_ipaddr_map = await _add_if_ipaddrs(
-            nb_api, device, add_if_ipaddrs, nb_if_map
-        )
-        if_ipaddr_map_has.update(new_if_ipaddr_map)
 
     # -------------------------------------------------------------------------
     # if the device is exclusively managed by NetCAD/CAM and there are
@@ -76,6 +83,16 @@ async def nb_sync_device_ipaddr_objs(
         )
         for del_key in del_if_ipaddrs:
             del if_ipaddr_map_has[del_key]
+
+    # -------------------------------------------------------------------------
+    # Process new IP addresses
+    # -------------------------------------------------------------------------
+
+    if add_if_ipaddrs := (exp_keys - has_keys):
+        new_if_ipaddr_map = await _add_if_ipaddrs(
+            nb_api, device, add_if_ipaddrs, nb_if_map
+        )
+        if_ipaddr_map_has.update(new_if_ipaddr_map)
 
     # return the current map of NetBox Interface IP addresses.
     return if_ipaddr_map_has
@@ -94,6 +111,10 @@ async def _add_if_ipaddrs(
     add_keys: set[tuple[str, str]],
     nb_if_map: dict[str, dict],
 ) -> dict[tuple[str, str], dict]:
+    """
+    Called when IP addresses need to be added and assigned to NetBox interfaces.
+    """
+
     log = get_logger()
     new_if_ipaddr_map = dict()
 
@@ -133,16 +154,21 @@ async def _del_if_ipaddrs(
     device: Device,
     del_if_ipaddr_recs: Iterable[dict],
 ):
+    """
+    Called when IP addresses need to be removed from interfaces that are
+    managed by the design.
+    """
     log = get_logger()
     dev_name = device.name
     for if_ipaddr_rec in del_if_ipaddr_recs:
         if_ipaddr = if_ipaddr_rec["address"]
         if_name = if_ipaddr_rec["assigned_object"]["name"]
         res: Response = await nb_api.op.ipam_ip_addresses_delete(id=if_ipaddr_rec["id"])
-        if res.status_code == HTTPStatus.OK:
-            log.info(f"{dev_name}:{if_name}: IP addresse {if_ipaddr} removed OK")
+
+        if res.is_error:
+            log.error(
+                f"{dev_name}:{if_name}: IP addresse {if_ipaddr} failed to remove: {res.text}"
+            )
             continue
 
-        log.error(
-            f"{dev_name}:{if_name}: IP addresse {if_ipaddr} failed to remove: {res.text}"
-        )
+        log.info(f"{dev_name}:{if_name}: IP addresse {if_ipaddr} removed OK")

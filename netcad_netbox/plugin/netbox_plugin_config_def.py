@@ -39,6 +39,18 @@ __all__ = ["NetBoxPluginConfig"]
 
 
 class NetBoxPluginConfig(BaseModel, extra=Extra.forbid):
+    """
+    Configuration in the netcad.toml file for the plugig "config" seciotn.
+    For exmaple:
+
+    [[netcad.plugins]]
+        name = 'NetBox'
+        package = "netcad_netbox"
+
+        config.netbox_url = "$NETBOX_ADDR"
+        config.netbox_token = "$NETBOX_TOKEN"
+    """
+
     netbox_url: EnvUrl
     netbox_token: EnvSecretStr
     timeout: int = 60

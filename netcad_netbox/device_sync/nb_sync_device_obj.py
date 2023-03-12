@@ -49,6 +49,15 @@ from netcad_netbox.netbox_design_config import (
 
 
 async def nb_sync_device_obj(nb_api: NetboxClient, dev: Device, status: str):
+    """
+    This function is used to sync the device properties into NetBox.
+
+    Notes
+    -----
+    The primary IP address is handled separately after interfaces and
+    ip-address records have been populated.
+    """
+
     log = get_logger()
     res: Response = await nb_api.op.dcim_devices_list(params=dict(name=dev.name))
     res.raise_for_status()
@@ -173,6 +182,11 @@ async def _patch_nb_record(
     nb_dev_obj,
     mismatch_fields,
 ) -> dict | None:
+    """
+    This function is called when any of the device property values need to be
+    updated.
+    """
+
     log = get_logger()
 
     log.info(f'{dev.name}: need to update {", ".join(mismatch_fields)}')

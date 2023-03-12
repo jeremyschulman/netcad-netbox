@@ -19,6 +19,8 @@ from .netbox_plugin_globals import g_netbox
 
 
 def plugin_init(plugin_def: dict):
+    """called during NetCAD startup"""
+
     if not (config := plugin_def.get("config")):
         raise RuntimeError(
             "Missing NetBox config in configuration file(s), please check."
@@ -26,5 +28,6 @@ def plugin_init(plugin_def: dict):
 
     try:
         g_netbox.config = NetBoxPluginConfig.parse_obj(config)
+
     except ValidationError as exc:
         raise RuntimeError(f"Failed to load NetBox plugin configuration: {str(exc)}")
