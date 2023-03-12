@@ -13,7 +13,7 @@ NETBOX_IF_TYPE_MAP = MappingProxyType(
         (PhyPortFormFactorType.SFP, PhyPortSpeeds.speed_1G): "1000base-x-sfp",
         (PhyPortFormFactorType.SFPP, PhyPortSpeeds.speed_10G): "10gbase-x-sfpp",
         (PhyPortFormFactorType.SFP28, PhyPortSpeeds.speed_25G): "25gbase-x-sfp28",
-        # (PhyPortFormFactorType.SFP28, PhyPortSpeeds.speed_50G): "50gbase-x-sfp28",
+        (PhyPortFormFactorType.SFP28, PhyPortSpeeds.speed_50G): "50gbase-x-sfp28",
         (PhyPortFormFactorType.QSFPP, PhyPortSpeeds.speed_40G): "40gbase-x-qsfpp",
         (PhyPortFormFactorType.QSFP28, PhyPortSpeeds.speed_100G): "100gbase-x-qsfp28",
     }
