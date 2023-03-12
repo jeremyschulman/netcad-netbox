@@ -6,7 +6,10 @@ from netcad.logger import get_logger
 from netcad.cli.common_opts import opt_devices, opt_designs
 from netcad.cli.device_inventory import get_devices_from_designs
 
+from netcad_netbox.aionetbox import NetboxClient
 from netcad_netbox.device_sync import nb_device_push
+from netcad_netbox.cabling_sync import nb_cabling_sync
+
 
 from .cli_nb_main import clig_netbox_main
 
@@ -31,8 +34,16 @@ def cli_nb_push(devices: Tuple[str], designs: Tuple[str], status: str):
         return
 
     async def run():
-        await asyncio.gather(
-            *{nb_device_push(dev_obj, status=status) for dev_obj in device_objs}
-        )
+        async with NetboxClient() as nb_api:
+            # push each of the devices into NetBox.
+            await asyncio.gather(
+                *{
+                    nb_device_push(nb_api, dev_obj, status=status)
+                    for dev_obj in device_objs
+                }
+            )
+
+            # ensure cabling is good.
+            await nb_cabling_sync(nb_api, device_objs)
 
     asyncio.run(run())
