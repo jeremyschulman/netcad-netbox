@@ -12,15 +12,38 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# -----------------------------------------------------------------------------
+# System Imports
+# -----------------------------------------------------------------------------
+
 from collections import defaultdict
 
-from httpx import Response
+# -----------------------------------------------------------------------------
+# Public Imports
+# -----------------------------------------------------------------------------
 
+from httpx import Response
 from netcad.device import Device
 from netcad.device.profiles import InterfaceLag
 from netcad.logger import get_logger
 
+# -----------------------------------------------------------------------------
+# Private Imports
+# -----------------------------------------------------------------------------
+
 from netcad_netbox.aionetbox import NetboxClient
+
+# -----------------------------------------------------------------------------
+# Exports
+# -----------------------------------------------------------------------------
+
+__all__ = ["nb_sync_device_lag_objs"]
+
+# -----------------------------------------------------------------------------
+#
+#                                 CODE BEGINS
+#
+# -----------------------------------------------------------------------------
 
 
 async def nb_sync_device_lag_objs(
@@ -106,10 +129,10 @@ async def _add_lag_members(
         )
 
         if res.is_error:
-            log.info(f"{dev.name}:{if_name} added to LAG {lag_name} OK")
+            log.error(f"{dev.name}:{if_name} failed add to LAG {lag_name}: {res.text}")
             continue
 
-        log.error(f"{dev.name}:{if_name} failed add to LAG {lag_name}: {res.text}")
+        log.info(f"{dev.name}:{if_name} added to LAG {lag_name} OK")
 
 
 async def _del_lag_members(
