@@ -24,6 +24,7 @@ from first import first
 # -----------------------------------------------------------------------------
 
 from .netbox_client import NetboxClient
+from .pager import Pager
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -112,9 +113,16 @@ async def fetch_device_ipaddrs(api: NetboxClient, device_id: int) -> list[dict]:
     any IP addresses assigned, then the empty-list is returned.
     """
 
-    res: Response = await api.op.ipam_ip_addresses_list(
-        params=dict(device_id=device_id)
+    return await Pager(api).all(
+        api.op.ipam_ip_addresses_list, params=dict(device_id=device_id)
     )
-    res.raise_for_status()
 
-    return res.json()["results"]
+
+async def fetch_device_interfaces(api: NetboxClient, device_id: int) -> list[dict]:
+    """
+    Retrieves all interface records for the given device.  If the device does
+    not have any interfaces, then the empty-list is returned.
+    """
+    return await Pager(api).all(
+        api.op.dcim_interfaces_list, params=dict(device_id=device_id)
+    )

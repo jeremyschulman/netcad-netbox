@@ -30,7 +30,7 @@ from netcad.device import Device
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from netcad_netbox.aionetbox import NetboxClient
+from netcad_netbox.aionetbox import NetboxClient, nb_fetch
 from netcad_netbox.netbox_map_if_type import netbox_map_interface_type
 from netcad_netbox.netbox_design_config import NetBoxInterfaceProperties
 
@@ -64,12 +64,12 @@ async def nb_sync_device_interface_objs(
     nb_dev_rec:
         The NetBox device record
     """
-    res: Response = await nb_api.op.dcim_interfaces_list(
-        params=dict(device_id=nb_dev_rec["id"])
-    )
-    res.raise_for_status()
-
-    nb_if_name_map = {rec["name"]: rec for rec in res.json()["results"]}
+    nb_if_name_map = {
+        rec["name"]: rec
+        for rec in await nb_fetch.fetch_device_interfaces(
+            nb_api, device_id=nb_dev_rec["id"]
+        )
+    }
 
     has_if_names = set(nb_if_name_map)
     expd_if_names = set(dev.interfaces)
