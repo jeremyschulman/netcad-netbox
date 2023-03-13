@@ -24,7 +24,6 @@ from netcad.logger import get_logger
 # Private Imports
 # -----------------------------------------------------------------------------
 
-
 from netcad_netbox.aionetbox import NetboxClient
 
 # -----------------------------------------------------------------------------
@@ -32,7 +31,6 @@ from netcad_netbox.aionetbox import NetboxClient
 # -----------------------------------------------------------------------------
 
 __all__ = ["nb_sync_device_obj_primary_ip"]
-
 
 # -----------------------------------------------------------------------------
 #

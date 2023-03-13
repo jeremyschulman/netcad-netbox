@@ -12,11 +12,31 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# -----------------------------------------------------------------------------
+# Public Imports
+# -----------------------------------------------------------------------------
+
 from netcad.device import Device
 from netcad.logger import get_logger
 
+# -----------------------------------------------------------------------------
+# Private Imports
+# -----------------------------------------------------------------------------
+
 from netcad_netbox.aionetbox import NetboxClient
 from netcad_netbox import device_sync
+
+# -----------------------------------------------------------------------------
+# Exports
+# -----------------------------------------------------------------------------
+
+__all__ = ["nb_device_push"]
+
+# -----------------------------------------------------------------------------
+#
+#                                 CODE BEGINS
+#
+# -----------------------------------------------------------------------------
 
 
 async def nb_device_push(nb_api: NetboxClient, dev: Device, status: str):
