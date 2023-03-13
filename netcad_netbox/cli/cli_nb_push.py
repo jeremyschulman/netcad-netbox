@@ -37,7 +37,10 @@ from .cli_nb_main import clig_netbox_main
 )
 @opt_devices()
 @opt_designs()
-def cli_nb_push(devices: Tuple[str], designs: Tuple[str], status: str):
+@click.option("--skip-cabling", is_flag=True, help="Skp the cabling sync step")
+def cli_nb_push(
+    devices: Tuple[str], designs: Tuple[str], status: str, skip_cabling: bool
+):
     """
     Push design devices into NetBox
     """
@@ -59,7 +62,8 @@ def cli_nb_push(devices: Tuple[str], designs: Tuple[str], status: str):
                 }
             )
 
-            # ensure cabling is good.
-            await nb_cabling_sync(nb_api, device_objs)
+            if not skip_cabling:
+                # ensure cabling is good.
+                await nb_cabling_sync(nb_api, device_objs)
 
     asyncio.run(run())

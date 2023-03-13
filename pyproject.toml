@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "netcad-netbox"
-version = "0.1.1"
+version = "0.1.2"
 description = "NetBox integration with NetCAD/CAM"
 readme = "README.md"
 authors = ["Jeremy Schulman"]
