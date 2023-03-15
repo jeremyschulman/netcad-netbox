@@ -154,12 +154,12 @@ async def _add_if_ipaddrs(
         res: Response = await nb_api.op.ipam_ip_addresses_create(json=new_ip_body)
         if res.status_code != HTTPStatus.CREATED:
             log.error(
-                f"{device.name}:{if_name} IP address {if_ipaddr} failed to create: {res.text}"
+                f"{device.name}: {if_name} IP address {if_ipaddr} failed to create: {res.text}"
             )
             continue
 
         log.info(
-            f"{device.name}:{if_name} IP address {if_ipaddr} created and assigned OK"
+            f"{device.name}: {if_name} IP address {if_ipaddr} created and assigned OK"
         )
         new_if_ipaddr_map[(if_name, if_ipaddr)] = res.json()
 
@@ -191,8 +191,8 @@ async def _del_if_ipaddrs(
 
         if res.is_error:
             log.error(
-                f"{dev_name}:{if_name}: IP addresse {if_ipaddr} failed to remove: {res.text}"
+                f"{dev_name}: {if_name}: IP addresse {if_ipaddr} failed to remove: {res.text}"
             )
             continue
 
-        log.info(f"{dev_name}:{if_name}: IP addresse {if_ipaddr} removed OK")
+        log.info(f"{dev_name}: {if_name}: IP addresse {if_ipaddr} removed OK")

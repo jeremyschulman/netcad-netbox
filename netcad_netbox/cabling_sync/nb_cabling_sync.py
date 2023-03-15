@@ -260,7 +260,12 @@ async def _del_cabling(nb_api: NetboxClient, del_cable_if_recs: Iterable[dict]):
     for if_rec in del_cable_if_recs:
         dev_name = if_rec["device"]["name"]
         if_name = if_rec["name"]
-        cable_id = if_rec["cable"]["id"]
+
+        if not (if_cable := if_rec['cable']):
+            log.warning(f"{dev_name}:{if_name} no cable to remove, skipping")
+            continue
+
+        cable_id = if_cable["id"]
 
         res: Response = await nb_api.op.dcim_cables_delete(id=cable_id)
 

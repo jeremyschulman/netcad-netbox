@@ -223,7 +223,7 @@ async def _patch_nb_record(
             case "status":
                 patch_nb_dev["status"] = dev_props_design.status
             case "product_model":
-                log.error(
+                log.warning(
                     f'{dev.name}: device-type "{dev_props_design.device_type}" matches, '
                     f'but not product-model "{dev_props_design.product_model}", check NetBox.'
                 )
