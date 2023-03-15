@@ -200,7 +200,7 @@ async def _sync_existing_interfaces(
         )
 
         if res.is_error:
-            log.error(f"{dev.name}:{if_name} update failed: {res.text}")
+            log.error(f"{dev.name}: {if_name} update failed: {res.text}")
             continue
 
         log.info(f"{dev.name}: {if_name}: updated OK")

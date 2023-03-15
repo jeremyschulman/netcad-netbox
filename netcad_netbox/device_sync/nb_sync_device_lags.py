@@ -129,10 +129,10 @@ async def _add_lag_members(
         )
 
         if res.is_error:
-            log.error(f"{dev.name}:{if_name} failed add to LAG {lag_name}: {res.text}")
+            log.error(f"{dev.name}: {if_name} failed add to LAG {lag_name}: {res.text}")
             continue
 
-        log.info(f"{dev.name}:{if_name} added to LAG {lag_name} OK")
+        log.info(f"{dev.name}: {if_name} added to LAG {lag_name} OK")
 
 
 async def _del_lag_members(
@@ -155,8 +155,8 @@ async def _del_lag_members(
 
         if res.is_error:
             log.error(
-                f"{dev.name}:{if_name} failed remove from LAG {lag_name}: {res.text}"
+                f"{dev.name}: {if_name} failed remove from LAG {lag_name}: {res.text}"
             )
             continue
 
-        log.info(f"{dev.name}:{if_name} removed from LAG {lag_name} OK")
+        log.info(f"{dev.name}: {if_name} removed from LAG {lag_name} OK")
