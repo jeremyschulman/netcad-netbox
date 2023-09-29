@@ -35,6 +35,7 @@ class NetBoxDeviceProperties:
     Device properites that we want to sync with NetBox
     """
 
+    device: Device
     site: str
     status: str
     device_role: str

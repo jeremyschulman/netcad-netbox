@@ -23,6 +23,10 @@ from netcad.cli.device_inventory import get_devices_from_designs
 from netcad_netbox.aionetbox import NetboxClient
 from netcad_netbox.device_sync import nb_device_push
 from netcad_netbox.cabling_sync import nb_cabling_sync
+from netcad_netbox.netbox_design_config import (
+    NetBoxDesignConfig,
+    NetBoxDeviceProperties,
+)
 
 
 from .cli_nb_main import clig_netbox_main
@@ -49,6 +53,16 @@ def cli_nb_push(
     if not (device_objs := get_devices_from_designs(designs, include_devices=devices)):
         log.error("No devices located in the given designs")
         return
+
+    nbdev_prop_objs = set()
+    for dev in device_objs:
+        nb_design_cfg: NetBoxDesignConfig = dev.design.config["netcad_netbox"]
+
+        # not all devices in the design could be put into NetBox.
+        if not (nbdev_prop_obj := nb_design_cfg.get_device_properties(dev, status=status)):
+            continue
+
+        nbdev_prop_objs.add(nbdev_prop_obj)
 
     async def run():
         """run the process in an asyncio context"""
