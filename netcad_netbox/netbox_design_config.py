@@ -82,17 +82,26 @@ class NetBoxDesignConfig:
 
     def get_device_properties(
         self, device: Device, status: str
-    ) -> NetBoxDeviceProperties:
+    ) -> NetBoxDeviceProperties | None:
         """
-        This method is responsible for returing the NetBox specific device
-        properpies that are associated to the given device object.
+        This function returns the NetBoxDesignProperties structure related to
+        the device in the design.  This function will return None if the
+        specific device should not be integrated into NetBox; for example any
+        host-device that is not to be included in NetBox.  That said, ideally
+        all devices in the design, inclusive of connected hosts, should be
+        included for completeness (in a perfect world ;-)
 
         Parameters
         ----------
         device:
-            The design device instance.
+            The design device object innstance
 
-        status:
-            The NetBox status value, such as "active" or "planned"
+        status: str
+            The NetBox device status value, for example "active" or "staged"
+
+        Returns
+        -------
+        Either a netbox device properties instance if the device is to be
+        included in NetBox, or None otherwise.
         """
         raise NotImplementedError()
