@@ -29,15 +29,29 @@ def find_mismatched_fields(me, other) -> set[str]:
     }
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
+class NetBoxSiteProperties:
+    site: str  # the site-slug
+    name: str  # the site-name
+    description: str
+    site_group: str | None = None  # the site-group slug, if present
+
+    def __sub__(self, other: "NetBoxDeviceProperties") -> set[str]:
+        """find field differences"""
+        return find_mismatched_fields(self, other)
+
+
+@dataclass(unsafe_hash=True)
 class NetBoxDeviceProperties:
     """
-    Device properites that we want to sync with NetBox
+    Device properites that we want to sync with NetBox.
+
+    We use the unsafe_hash so that we can use an instance as a key into a
+    collection/set.
     """
 
-    device: Device
-    site: str
-    status: str
+    site: str  # the site-slug
+    status: str  # the status-slug
     device_role: str
     device_type: str
     platform: str
@@ -71,7 +85,7 @@ class NetBoxDesignConfig:
     Any design that wants to use this plugin needs to subclass and provide the
     method implementations.  The configuration object should be stored in:
 
-        design.config['netcad_netbox] = <instance to this config>
+        design.config['netcad_netbox'] = <instance to this config>
 
     """
 
@@ -80,6 +94,9 @@ class NetBoxDesignConfig:
         Constructor, should be called during the deisgn build process.
         """
         self.design = design
+
+    def get_site_properties(self, status: str) -> NetBoxSiteProperties:
+        pass
 
     def get_device_properties(
         self, device: Device, status: str
@@ -90,7 +107,7 @@ class NetBoxDesignConfig:
         specific device should not be integrated into NetBox; for example any
         host-device that is not to be included in NetBox.  That said, ideally
         all devices in the design, inclusive of connected hosts, should be
-        included for completeness (in a perfect world ;-)
+        included for completeness - in a perfect world ;-)
 
         Parameters
         ----------

@@ -21,7 +21,6 @@ from first import first
 
 from netcad.device import Device
 from netcad.logger import get_logger
-from pydantic import ValidationError
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -47,7 +46,9 @@ __all__ = ["nb_sync_device_obj"]
 # -----------------------------------------------------------------------------
 
 
-async def nb_sync_device_obj(nb_api: NetboxClient, dev: Device, status: str):
+async def nb_sync_device_obj(
+    nb_api: NetboxClient, dev: Device, dev_prop_obj: NetBoxDeviceProperties, status: str
+):
     """
     This function is used to sync the device properties into NetBox.
 
@@ -57,22 +58,11 @@ async def nb_sync_device_obj(nb_api: NetboxClient, dev: Device, status: str):
     ip-address records have been populated.
     """
 
-    log = get_logger()
     res: Response = await nb_api.op.dcim_devices_list(params=dict(name=dev.name))
     res.raise_for_status()
 
-    nb_design_cfg: NetBoxDesignConfig = dev.design.config["netcad_netbox"]
-    try:
-        dev_props_design = nb_design_cfg.get_device_properties(dev, status=status)
-
-    except ValidationError as exc:
-        log.error(
-            f"{dev.name} failed to obtain design properies for NetBox: {str(exc)}"
-        )
-        return
-
     if not (nb_dev_rec := first(res.json()["results"])):
-        return await nb_create_new_device_obj(nb_api, dev, dev_props_design)
+        return await nb_create_new_device_obj(nb_api, dev, dev_prop_obj)
 
     # if we are here, then the device record exists, and we should check to see
     # if the properties match our expected values.
