@@ -31,6 +31,8 @@ def find_mismatched_fields(me, other) -> set[str]:
 
 @dataclass(unsafe_hash=True)
 class NetBoxSiteProperties:
+    """used to ensure that a NetBox site record exists"""
+
     site: str  # the site-slug
     name: str  # the site-name
     description: str
@@ -96,7 +98,20 @@ class NetBoxDesignConfig:
         self.design = design
 
     def get_site_properties(self, status: str) -> NetBoxSiteProperties:
-        pass
+        """
+        This function returns the NetBoxSiteDesignProperites instance
+        associated with the given design (instance variable).
+
+        Parameters
+        ----------
+        status:
+            The NetBox site status value, for example, "active" or "planned"
+
+        Returns
+        -------
+        The site properties for the given design,
+        """
+        raise NotImplementedError()
 
     def get_device_properties(
         self, device: Device, status: str

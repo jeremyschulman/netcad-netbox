@@ -25,7 +25,7 @@ from netcad_netbox.aionetbox import NetboxClient
 from netcad_netbox.device_sync import nb_device_push
 from netcad_netbox.nb_site_sync import nb_sync_sites
 
-from netcad_netbox.cabling_sync import nb_cabling_sync
+from netcad_netbox.nb_cabling_sync import nb_cabling_sync
 from netcad_netbox.netbox_design_config import NetBoxDesignConfig
 
 from .cli_nb_main import clig_netbox_main
@@ -101,6 +101,6 @@ def cli_nb_push(
 
             if not no_cabling:
                 # ensure cabling is good.
-                await nb_cabling_sync(nb_api, device_objs)
+                await nb_cabling_sync(nb_api, nbdev_prop_objs)
 
     asyncio.run(run())
