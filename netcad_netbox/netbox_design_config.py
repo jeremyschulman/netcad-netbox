@@ -29,14 +29,31 @@ def find_mismatched_fields(me, other) -> set[str]:
     }
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
+class NetBoxSiteProperties:
+    """used to ensure that a NetBox site record exists"""
+
+    site: str  # the site-slug
+    name: str  # the site-name
+    description: str
+    site_group: str | None = None  # the site-group slug, if present
+
+    def __sub__(self, other: "NetBoxDeviceProperties") -> set[str]:
+        """find field differences"""
+        return find_mismatched_fields(self, other)
+
+
+@dataclass(unsafe_hash=True)
 class NetBoxDeviceProperties:
     """
-    Device properites that we want to sync with NetBox
+    Device properites that we want to sync with NetBox.
+
+    We use the unsafe_hash so that we can use an instance as a key into a
+    collection/set.
     """
 
-    site: str
-    status: str
+    site: str  # the site-slug
+    status: str  # the status-slug
     device_role: str
     device_type: str
     platform: str
@@ -70,7 +87,7 @@ class NetBoxDesignConfig:
     Any design that wants to use this plugin needs to subclass and provide the
     method implementations.  The configuration object should be stored in:
 
-        design.config['netcad_netbox] = <instance to this config>
+        design.config['netcad_netbox'] = <instance to this config>
 
     """
 
@@ -80,19 +97,44 @@ class NetBoxDesignConfig:
         """
         self.design = design
 
+    def get_site_properties(self, status: str) -> NetBoxSiteProperties:
+        """
+        This function returns the NetBoxSiteDesignProperites instance
+        associated with the given design (instance variable).
+
+        Parameters
+        ----------
+        status:
+            The NetBox site status value, for example, "active" or "planned"
+
+        Returns
+        -------
+        The site properties for the given design,
+        """
+        raise NotImplementedError()
+
     def get_device_properties(
         self, device: Device, status: str
-    ) -> NetBoxDeviceProperties:
+    ) -> NetBoxDeviceProperties | None:
         """
-        This method is responsible for returing the NetBox specific device
-        properpies that are associated to the given device object.
+        This function returns the NetBoxDesignProperties structure related to
+        the device in the design.  This function will return None if the
+        specific device should not be integrated into NetBox; for example any
+        host-device that is not to be included in NetBox.  That said, ideally
+        all devices in the design, inclusive of connected hosts, should be
+        included for completeness - in a perfect world ;-)
 
         Parameters
         ----------
         device:
-            The design device instance.
+            The design device object innstance
 
-        status:
-            The NetBox status value, such as "active" or "planned"
+        status: str
+            The NetBox device status value, for example "active" or "staged"
+
+        Returns
+        -------
+        Either a netbox device properties instance if the device is to be
+        included in NetBox, or None otherwise.
         """
         raise NotImplementedError()

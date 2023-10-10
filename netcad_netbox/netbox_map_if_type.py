@@ -124,7 +124,7 @@ NETBOX_IF_TYPE_MAP = MappingProxyType(
         (PhyPortFormFactorType.RJ45, PhyPortSpeeds.speed_1G): "1000base-t",
         (PhyPortFormFactorType.RJ45, PhyPortSpeeds.speed_2_5G): "2.5gbase-t",
         (PhyPortFormFactorType.RJ45, PhyPortSpeeds.speed_5G): "5gbase-t",
-        (PhyPortFormFactorType.RJ45, PhyPortSpeeds.speed_1G): "10gbase-t",
+        (PhyPortFormFactorType.RJ45, PhyPortSpeeds.speed_10G): "10gbase-t",
         (PhyPortFormFactorType.SFP, PhyPortSpeeds.speed_1G): "1000base-x-sfp",
         (PhyPortFormFactorType.SFPP, PhyPortSpeeds.speed_10G): "10gbase-x-sfpp",
         (PhyPortFormFactorType.SFP28, PhyPortSpeeds.speed_10G): "10gbase-x-sfpp",
@@ -192,9 +192,9 @@ def netbox_map_interface_type(iface_obj: DeviceInterface) -> str:
         )
     except AttributeError:
         logging.error(
-            f'{dev_name}:{iface_obj.name} profile {if_prof.name} missing form-factor information, please check.'
+            f"{dev_name}:{iface_obj.name} profile {if_prof.name} missing form-factor information, please check."
         )
-        return 'other'
+        return "other"
 
     if nb_if_type := NETBOX_IF_TYPE_MAP.get(if_type_key):
         return nb_if_type

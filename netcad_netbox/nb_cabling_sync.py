@@ -25,7 +25,6 @@ from typing import Iterable
 
 from httpx import Response
 from first import first
-
 from netcad.logger import get_logger
 from netcad.device import Device, DeviceInterface
 
@@ -33,7 +32,8 @@ from netcad.device import Device, DeviceInterface
 # Priavte Imports
 # -----------------------------------------------------------------------------
 
-from netcad_netbox.aionetbox import NetboxClient
+from .aionetbox import NetboxClient
+from .netbox_design_config import NetBoxDeviceProperties
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -48,7 +48,9 @@ __all__ = ["nb_cabling_sync"]
 # -----------------------------------------------------------------------------
 
 
-async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
+async def nb_cabling_sync(
+    nb_api: NetboxClient, device_prop_objs: dict[Device, NetBoxDeviceProperties]
+):
     """
     This function is used to ensure the NetBox cabling is correct relative to
     the design device cabling map.
@@ -56,20 +58,40 @@ async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
 
     log = get_logger()
     log.info("Checking cabling ... ")
+
+    # we only want to cable devices in the design that are expected to be in
+    # NetBox. not all devices in the design may be in netbox; for example the
+    # host devices.
+
+    allowed_device_names = {dev.name for dev in device_prop_objs}
+
     # -------------------------------------------------------------------------
     # Formulate the design cabling map from the list of provided devices.
     # -------------------------------------------------------------------------
 
     def cable_key(if_obj: DeviceInterface):
-        """sorted key for cable-map"""
-        _if_key = (if_obj.device.name, if_obj.name)
+        """
+        sorted key for cable-map.
+
+        If either of the endpoint devices are not in the allowed devices names,
+        meaning these are devices not expected in NetBox, then return 'None' to
+        prevent a cable action to a non-existing device.
+        """
+        if if_obj.device.name not in allowed_device_names:
+            return None
+
         _rmt_if_obj: DeviceInterface = if_obj.cable_peer
+
+        if _rmt_if_obj.device.name not in allowed_device_names:
+            return None
+
+        _if_key = (if_obj.device.name, if_obj.name)
         _rmt_key = (_rmt_if_obj.device.name, _rmt_if_obj.name)
         return tuple(sorted((_if_key, _rmt_key)))
 
     dev_cables = set()
 
-    for dev_obj in device_objs:
+    for dev_obj in device_prop_objs.keys():
         dev_cables.update(
             {
                 cable_key(interface)
@@ -77,6 +99,9 @@ async def nb_cabling_sync(nb_api: NetboxClient, device_objs: Iterable[Device]):
                 if interface.cable_peer and not interface.profile.is_lag
             }
         )
+
+    # noinspection PyTypeChecker
+    dev_cables.discard(None)
 
     # -------------------------------------------------------------------------
     # Fetch all of the NetBox device records
@@ -261,7 +286,7 @@ async def _del_cabling(nb_api: NetboxClient, del_cable_if_recs: Iterable[dict]):
         dev_name = if_rec["device"]["name"]
         if_name = if_rec["name"]
 
-        if not (if_cable := if_rec['cable']):
+        if not (if_cable := if_rec["cable"]):
             log.warning(f"{dev_name}:{if_name} no cable to remove, skipping")
             continue
 
