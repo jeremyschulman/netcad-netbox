@@ -70,6 +70,8 @@ async def nb_sync_sites(nb_api, sites: set[NetBoxSiteProperties]):
 
     log = get_logger()
 
+    site_prop_obj: NetBoxSiteProperties
+
     for site_prop_obj in filter(lambda _s: _s.site in need_sites, sites):
         # get the site-group records for any site-obj that needs it since we need
         # that group-id (int) when creating the site.
@@ -91,7 +93,7 @@ async def nb_sync_sites(nb_api, sites: set[NetBoxSiteProperties]):
         res = await nb_api.op.dcim_sites_create(
             json=dict(
                 name=site_prop_obj.site.upper(),
-                description=site_prop_obj.name,
+                description=site_prop_obj.description,
                 slug=site_prop_obj.site,
                 group=site_group_id,
             )
