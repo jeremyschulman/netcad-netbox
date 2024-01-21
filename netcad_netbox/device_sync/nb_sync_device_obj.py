@@ -102,7 +102,7 @@ async def nb_create_new_device_obj(
         status=dev_props_design.status,
         site=site_rec["id"],
         device_type=dt_rec["id"],
-        device_role=dr_rec["id"],
+        role=dr_rec["id"],
         platform=os_rec["id"],
     )
 
