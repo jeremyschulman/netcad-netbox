@@ -14,4 +14,4 @@
 
 from .netbox_client import NetboxClient
 from .pager import Pager
-from .dyninv import NetBoxDynamicInventory
+from .nb_dyninv import NetBoxDynamicInventory

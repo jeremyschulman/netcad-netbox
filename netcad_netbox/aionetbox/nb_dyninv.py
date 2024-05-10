@@ -40,6 +40,12 @@ class NetBoxDynamicInventory:
         """Constructor for the NetBoxDynamicInventory class."""
         self._netbox_devices = dict()
 
+    # -------------------------------------------------------------------------
+    #
+    #                                   Public Methods
+    #
+    # -------------------------------------------------------------------------
+
     @staticmethod
     def api(**kwargs) -> NetboxClient:
         """
@@ -80,32 +86,6 @@ class NetBoxDynamicInventory:
 
         return records
 
-    async def fetch_device_by_name(self, name: str) -> Device:
-        """
-        This function is used to retrieve a device record by name.  The caller must provide
-        the device name.  The resulting device record is added to the internally managed list
-        of NetBox devices.
-
-        Parameters
-        ----------
-        name
-            The name of the device to retrieve.
-
-        Returns
-        -------
-        The device record.
-        """
-        async with NetboxClient() as api:
-            res = await api.op.dcim_devices_list(params=dict(name=name))
-            res.raise_for_status()
-            if not (body := res.json()["results"]):
-                raise ValueError(f"Device {name} not found")
-
-            rec = body[0]
-            self._netbox_devices[rec["name"]] = rec
-
-        return rec
-
     async def fetch_devices_by_name(self, names: Sequence[str]):
         """
         This function is used to retrieve a list of device records by name.  The caller must provide
@@ -125,8 +105,7 @@ class NetBoxDynamicInventory:
         self._netbox_devices.update({dev["name"]: dev for dev in devices})
         return devices
 
-    @property
-    def inventory(self) -> Sequence[Device]:
+    def build_inventory(self) -> Sequence[Device]:
         """
         This property is used to return the list of Device instances that have been
         retrieved from NetBox.
@@ -135,4 +114,27 @@ class NetBoxDynamicInventory:
         -------
         The list of Device instances.
         """
-        return []
+        build_cls_set = set(
+            (dev["platform"]["slug"], dev["device_type"]["slug"])
+            for dev in self._netbox_devices.values()
+        )
+
+        for os_name, device_type in build_cls_set:
+            print(os_name, device_type)
+            dev_type_cls = type(
+                f"{os_name}_{device_type}",
+                (Device,),
+                dict(os_name=os_name, device_type=device_type.upper()),
+            )
+
+        breakpoint()
+        x = 1
+
+    # -------------------------------------------------------------------------
+    #
+    #                                   DUNDER METHODS
+    #
+    # -------------------------------------------------------------------------
+
+    def __len__(self):
+        return len(self._netbox_devices)
