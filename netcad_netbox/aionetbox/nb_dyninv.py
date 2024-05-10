@@ -114,21 +114,33 @@ class NetBoxDynamicInventory:
         -------
         The list of Device instances.
         """
-        build_cls_set = set(
-            (dev["platform"]["slug"], dev["device_type"]["slug"])
-            for dev in self._netbox_devices.values()
-        )
 
-        for os_name, device_type in build_cls_set:
-            print(os_name, device_type)
-            dev_type_cls = type(
+        dev_type_map = {
+            # we need to define specific class definitions dynamically using
+            # "type" for each of the OS+Device-Type combinations. we will map
+            # these to the Device instances that we will create.
+            (os_name, device_type): type(
                 f"{os_name}_{device_type}",
                 (Device,),
                 dict(os_name=os_name, device_type=device_type.upper()),
             )
+            # build the unique set of OS+Device-Type combinations so that we
+            # can dynamically build the classes for each of these.
+            for os_name, device_type in set(
+                (dev["platform"]["slug"], dev["device_type"]["slug"])
+                for dev in self._netbox_devices.values()
+            )
+        }
 
-        breakpoint()
-        x = 1
+        # Using the built type mapping, return a list of the Device instances
+        # for each of the NetBox device records.
+
+        return [
+            dev_type_map[(dev["platform"]["slug"], dev["device_type"]["slug"])](
+                name=dev["name"]
+            )
+            for dev in self._netbox_devices.values()
+        ]
 
     # -------------------------------------------------------------------------
     #
@@ -137,4 +149,5 @@ class NetBoxDynamicInventory:
     # -------------------------------------------------------------------------
 
     def __len__(self):
+        """returns the number of devices currently in the inventory."""
         return len(self._netbox_devices)
