@@ -3,12 +3,14 @@
 # -----------------------------------------------------------------------------
 
 from typing import Sequence
+from ipaddress import IPv4Interface
 
 # -----------------------------------------------------------------------------
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.device import Device
+from netcad.device import DeviceNonExclusive
+from netcad.device.profiles import InterfaceL3
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -39,6 +41,7 @@ class NetBoxDynamicInventory:
     def __init__(self):
         """Constructor for the NetBoxDynamicInventory class."""
         self._netbox_devices = dict()
+        self.devices = set()
 
     # -------------------------------------------------------------------------
     #
@@ -63,7 +66,7 @@ class NetBoxDynamicInventory:
         """
         return NetboxClient(**kwargs)
 
-    async def fetch_devices(self, **params) -> Sequence[Device]:
+    async def fetch_devices(self, **params) -> Sequence[DeviceNonExclusive]:
         """
         This function is used to retrieve a list of device records.  The caller must provide
         the API parameters that will be used in the call to GET /dcim/devices.  The resulting
@@ -105,7 +108,7 @@ class NetBoxDynamicInventory:
         self._netbox_devices.update({dev["name"]: dev for dev in devices})
         return devices
 
-    def build_inventory(self) -> Sequence[Device]:
+    def build_inventory(self) -> Sequence[DeviceNonExclusive]:
         """
         This property is used to return the list of Device instances that have been
         retrieved from NetBox.
@@ -121,7 +124,7 @@ class NetBoxDynamicInventory:
             # these to the Device instances that we will create.
             (os_name, device_type): type(
                 f"{os_name}_{device_type}",
-                (Device,),
+                (DeviceNonExclusive,),
                 dict(os_name=os_name, device_type=device_type.upper()),
             )
             # build the unique set of OS+Device-Type combinations so that we
@@ -135,12 +138,23 @@ class NetBoxDynamicInventory:
         # Using the built type mapping, return a list of the Device instances
         # for each of the NetBox device records.
 
-        return [
-            dev_type_map[(dev["platform"]["slug"], dev["device_type"]["slug"])](
-                name=dev["name"]
+        dev: DeviceNonExclusive
+
+        self.devices.clear()
+
+        for nb_dev in self._netbox_devices.values():
+            dev_cls = dev_type_map[
+                (nb_dev["platform"]["slug"], nb_dev["device_type"]["slug"])
+            ]
+            dev = dev_cls(name=nb_dev["name"])
+            pri_intf = dev.interfaces["primary_interface"]
+            pri_intf.profile = InterfaceL3(
+                if_ipaddr=IPv4Interface(nb_dev["primary_ip"]["address"])
             )
-            for dev in self._netbox_devices.values()
-        ]
+            dev.set_primary_ip_interface(pri_intf)
+            self.devices.add(dev)
+
+        return self.devices
 
     # -------------------------------------------------------------------------
     #
