@@ -15,6 +15,7 @@ from netcad.device import Device
 # -----------------------------------------------------------------------------
 
 from netcad_netbox.aionetbox import NetboxClient, Pager
+from .nb_fetch import fetch_devices_by_name
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -36,6 +37,7 @@ class NetBoxDynamicInventory:
     """
 
     def __init__(self):
+        """Constructor for the NetBoxDynamicInventory class."""
         self._netbox_devices = dict()
 
     @staticmethod
@@ -104,6 +106,25 @@ class NetBoxDynamicInventory:
 
         return rec
 
+    async def fetch_devices_by_name(self, names: Sequence[str]):
+        """
+        This function is used to retrieve a list of device records by name.  The caller must provide
+        the list of device names.  The resulting device records are added to the internally managed list
+        of NetBox devices.
+
+        Parameters
+        ----------
+        names
+            The list of device names to retrieve.
+
+        Returns
+        -------
+        The list of device records.
+        """
+        devices = await fetch_devices_by_name(self.api(), names)
+        self._netbox_devices.update({dev["name"]: dev for dev in devices})
+        return devices
+
     @property
     def inventory(self) -> Sequence[Device]:
         """
@@ -114,4 +135,4 @@ class NetBoxDynamicInventory:
         -------
         The list of Device instances.
         """
-        return [Device.from_dict(d) for d in self._netbox_devices.values()]
+        return []

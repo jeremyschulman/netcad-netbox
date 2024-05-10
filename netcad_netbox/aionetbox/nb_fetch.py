@@ -13,6 +13,13 @@
 #  limitations under the License.
 
 # -----------------------------------------------------------------------------
+# System Imports
+# -----------------------------------------------------------------------------
+
+from typing import Sequence
+import asyncio
+
+# -----------------------------------------------------------------------------
 # Public Imports
 # -----------------------------------------------------------------------------
 
@@ -36,6 +43,7 @@ __all__ = [
     "fetch_device_ipaddrs",
     "fetch_device_role",
     "fetch_device_type",
+    "fetch_devices_by_name",
 ]
 
 # -----------------------------------------------------------------------------
@@ -126,3 +134,37 @@ async def fetch_device_interfaces(api: NetboxClient, device_id: int) -> list[dic
     return await Pager(api).all(
         api.op.dcim_interfaces_list, params=dict(device_id=device_id)
     )
+
+
+async def fetch_devices_by_name(
+    api: NetboxClient, names: Sequence[str], **params
+) -> list[dict]:
+    """
+    Fetch netbox devices give a list of names.
+
+    Parameters
+    ----------
+    api:
+        Instance to NetBox client
+
+    names:
+        A list of device hostnames to retrieve from NetBox.
+
+    Other Parameters
+    ----------------
+    Any other NetBox API supported parameters.  For example, getting only
+    decommissioning devices, an extra param would be: status='decommissioning'
+
+    Returns
+    -------
+    List of NetBox device records.
+    """
+    gathered = await asyncio.gather(
+        *(api.op.dcim_devices_list(params=dict(name=name, **params)) for name in names)
+    )
+    records = [rec for res in gathered for rec in res.json()["results"]]
+    found_names = {rec["name"] for rec in records}
+    if missing_names := (set(names) - found_names):
+        raise RuntimeError(f"NetBox missing devices: {missing_names}")
+
+    return records
