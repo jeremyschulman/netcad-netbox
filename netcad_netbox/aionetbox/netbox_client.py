@@ -93,10 +93,8 @@ class NetboxClient(AsyncClient):
         kwargs.setdefault("timeout", self.DEFAULT_TIMEOUT)
         kwargs.setdefault("follow_redirects", True)
 
-        super().__init__(
-            base_url=f"{url}/api",
-            **kwargs,
-        )
+        super().__init__(base_url=f"{url}/api", **kwargs)
+
         self.headers["Authorization"] = f"Token {token}"
         self._api_s4 = asyncio.Semaphore(self.API_RATE_LIMIT)
         swagger_file = _g_module_dir / (swagger_file or self.DEFAULT_SWAGGER_FILE)
