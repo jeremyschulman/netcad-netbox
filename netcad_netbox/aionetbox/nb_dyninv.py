@@ -34,14 +34,35 @@ __all__ = ["NetBoxDynamicInventory"]
 
 class NetBoxDynamicInventory:
     """
-    This class is used to create a NETCAD list of Device instances using Netbox
-    device records as the source of truth.
+    This class is used to create a NetCAD list of Device instances using Netbox
+    device records as the source of truth.  The Devices are "non-exclusive" in
+    so that actions can be performed in a partial-merge configuration mode.
+
+    The NetBoxDynamicInventory supports a context manager; it is to
+    automatically call the build_inventory method once the Caller has completed
+    their "fetch" methods.  For example:
+
+    async with NetBoxDynamicInventory() as dyninv:
+        await dyninv.fetch_devices(site="HQ")
+
+    Upon exiting the context manager, the inventory will be built into the
+    'inventory' attribute.  The Caller must then add those inventory to the design.
     """
 
     def __init__(self):
         """Constructor for the NetBoxDynamicInventory class."""
+
+        # Uses the NetBox device record "id" field as the key into the
+        # dictionary so that we have a unique set of device recoreds.  This
+        # handles the case where the Caller might have made multiple fetch
+        # calls that results in duplicate device records.
+
         self.netbox_devices: dict[int, dict] = dict()
-        self.devices: set[DeviceNonExclusive] = set()
+
+        # The resulting set of Device instances that are created from the
+        # NetBox records.  This set is created by the `build_inventory` method.
+
+        self.inventory: set[DeviceNonExclusive] = set()
 
     # -------------------------------------------------------------------------
     #
@@ -49,32 +70,17 @@ class NetBoxDynamicInventory:
     #
     # -------------------------------------------------------------------------
 
-    def api(self, **kwargs) -> NetboxClient:
-        """
-        This function is used to return an API client instance to NetBox so
-        that the Caller can make direct calls as needed to retrieve device
-        records.
-
-        Other Parameters
-        ----------------
-        Any parameters supported by the NetboxClient constructor.
-
-        Returns
-        -------
-        The NetboxClient instance.
-        """
-        return NetboxClient(**kwargs)
-
     async def fetch_devices(self, **params) -> Sequence[dict]:
         """
-        This function is used to retrieve a list of device records.  The caller must provide
-        the API parameters that will be used in the call to GET /dcim/devices.  The resulting
-        device records are added to the internally managed list of NetBox devices.
+        This function is used to retrieve a list of device records.  The caller
+        must provide the API parameters that will be used in the call to GET
+        /dcim/inventory.  The resulting device records are added to the
+        internally managed list of NetBox inventory.
 
         Parameters
         ----------
         params
-            The NetBox /dcim/devices query parameters.
+            The NetBox /dcim/inventory query parameters.
 
         Returns
         -------
@@ -87,14 +93,19 @@ class NetBoxDynamicInventory:
 
         return records
 
-    def add_netbox_devices(self, records: dict):
-        self.netbox_devices.update({rec["id"]: rec for rec in records})
-
     async def custom_fetch(self, fetching_func, *args, **kwargs):
         """
         This function is used to call a custom fetching function that will retrieve
         the device records.  The Caller must provide the function and any additional
         arguments that are needed for the function to execute.
+
+        The fetching_func must yield the device records as they are retrieved.
+        This enables the Caller to process the records as they are retrieved,
+        rather than waiting for all records to be collected into a list.
+
+        The fetching_func will be pass a NetBoxClient instance as the first
+        argument. The remaining *args and **kwargs are passed as provided by
+        the Caller.
 
         Parameters
         ----------
@@ -106,10 +117,6 @@ class NetBoxDynamicInventory:
 
         kwargs
             The list of keyword arguments for the fetching function.
-
-        Returns
-        -------
-        The list of device records.
         """
         async with self.api() as api:
             async for nb_recs in fetching_func(api, *args, **kwargs):
@@ -119,7 +126,7 @@ class NetBoxDynamicInventory:
         """
         This function is used to retrieve a list of device records by name.  The caller must provide
         the list of device names.  The resulting device records are added to the internally managed list
-        of NetBox devices.
+        of NetBox inventory.
 
         Parameters
         ----------
@@ -134,14 +141,11 @@ class NetBoxDynamicInventory:
         self.add_netbox_devices(devices)
         return devices
 
-    def build_inventory(self) -> Sequence[DeviceNonExclusive]:
+    def build_inventory(self):
         """
-        This property is used to return the list of Device instances that have been
-        retrieved from NetBox.
-
-        Returns
-        -------
-        The list of Device instances.
+        This function is used to create list of Device instances based on the
+        device records retrieved from NetBox.  The resulting Device inventory
+        is stored in the 'inventory' attribute.
         """
 
         dev_type_map = {
@@ -166,7 +170,7 @@ class NetBoxDynamicInventory:
 
         dev: DeviceNonExclusive
 
-        self.devices.clear()
+        self.inventory.clear()
 
         for nb_dev in self.netbox_devices.values():
             dev_cls = dev_type_map[
@@ -178,9 +182,36 @@ class NetBoxDynamicInventory:
                 if_ipaddr=IPv4Interface(nb_dev["primary_ip"]["address"])
             )
             dev.set_primary_ip_interface(pri_intf)
-            self.devices.add(dev)
+            self.inventory.add(dev)
 
-        return self.devices
+        return self.inventory
+
+    def api(self, **kwargs) -> NetboxClient:  # noqa
+        """
+        This function is used to return an API client instance to NetBox so
+        that the Caller can make direct calls as needed to retrieve device
+        records.  This method exists should the Caller want to sublcass and
+        customize the NetBoxClient instance.
+
+        Other Parameters
+        ----------------
+        Any parameters supported by the NetboxClient constructor.
+
+        Returns
+        -------
+        The NetboxClient instance.
+        """
+        return NetboxClient(**kwargs)
+
+    def add_netbox_devices(self, records: dict):
+        """
+        Helper function to add device records to the internal list of NetBox
+        inventory.  Uses the NetBox device record "id" field as the key into the
+        dictionary so that we have a unique set of device recoreds.  This
+        handles the case where the Caller might have made multiple fetch calls
+        that results in duplicate device records.
+        """
+        self.netbox_devices.update({rec["id"]: rec for rec in records})
 
     # -------------------------------------------------------------------------
     #
@@ -189,7 +220,7 @@ class NetBoxDynamicInventory:
     # -------------------------------------------------------------------------
 
     def __len__(self):
-        """returns the number of devices currently in the inventory."""
+        """returns the number of inventory currently in the inventory."""
         return len(self.netbox_devices)
 
     # -------------------------------------------------------------------------
@@ -203,7 +234,7 @@ class NetBoxDynamicInventory:
     #       await dyninv.fetch_devices(site="HQ")
     #
     #  Upon exiting the context manager, the inventory will be built into the
-    #  'devices' attribute.  The Caller must then add those devices to the
+    #  'inventory' attribute.  The Caller must then add those inventory to the
     #  design.
     # -------------------------------------------------------------------------
 
