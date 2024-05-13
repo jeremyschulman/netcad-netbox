@@ -49,8 +49,7 @@ class NetBoxDynamicInventory:
     #
     # -------------------------------------------------------------------------
 
-    @staticmethod
-    def api(**kwargs) -> NetboxClient:
+    def api(self, **kwargs) -> NetboxClient:
         """
         This function is used to return an API client instance to NetBox so
         that the Caller can make direct calls as needed to retrieve device
