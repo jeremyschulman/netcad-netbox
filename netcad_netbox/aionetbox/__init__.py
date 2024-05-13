@@ -15,3 +15,4 @@
 from .netbox_client import NetboxClient
 from .pager import Pager
 from .nb_dyninv import NetBoxDynamicInventory
+from .nb_fetch import fetch_devices_by_name
