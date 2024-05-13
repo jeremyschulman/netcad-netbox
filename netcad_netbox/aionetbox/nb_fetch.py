@@ -140,7 +140,7 @@ async def fetch_devices_by_name(
     api: NetboxClient, names: Sequence[str], **params
 ) -> list[dict]:
     """
-    Fetch netbox devices give a list of names.
+    Fetch netbox devices give a list of hostnames.
 
     Parameters
     ----------
@@ -162,8 +162,9 @@ async def fetch_devices_by_name(
     gathered = await asyncio.gather(
         *(api.op.dcim_devices_list(params=dict(name=name, **params)) for name in names)
     )
-    records = [rec for res in gathered for rec in res.json()["results"]]
-    found_names = {rec["name"] for rec in records}
+    records = [rec for res in gathered for rec in res.json().get("results")]
+    found_names = {rec.get("name") for rec in records}
+
     if missing_names := (set(names) - found_names):
         raise RuntimeError(f"NetBox missing devices: {missing_names}")
 
