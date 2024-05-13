@@ -2,7 +2,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-from typing import Sequence
+from typing import Sequence, AsyncGenerator, Callable
 from ipaddress import IPv4Interface
 
 # -----------------------------------------------------------------------------
@@ -30,6 +30,12 @@ __all__ = ["NetBoxDynamicInventory"]
 #                             CODE BEGINS
 #
 # -----------------------------------------------------------------------------
+
+# For the 'cutom_fetch' method, we define a type hint for the custom fetching
+# function.  The function will yield lists of NetBox device records (dict).
+
+YieldsNetBoxDeviceList = AsyncGenerator[list[dict], None]
+CustomFetchFuncType = Callable[[NetboxClient, ...], YieldsNetBoxDeviceList]
 
 
 class NetBoxDynamicInventory:
@@ -93,7 +99,7 @@ class NetBoxDynamicInventory:
 
         return records
 
-    async def custom_fetch(self, fetching_func, *args, **kwargs):
+    async def custom_fetch(self, fetching_func: CustomFetchFuncType, *args, **kwargs):
         """
         This function is used to call a custom fetching function that will retrieve
         the device records.  The Caller must provide the function and any additional
