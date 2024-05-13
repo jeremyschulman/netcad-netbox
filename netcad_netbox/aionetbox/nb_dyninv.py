@@ -30,8 +30,10 @@ __all__ = ["NetBoxDynamicInventory"]
 #
 # -----------------------------------------------------------------------------
 
-# For the 'cutom_fetch' method, we define a type hint for the custom fetching
-# function.  The function will yield lists of NetBox device records (dict).
+# For the 'custom_fetch' method, we define a type hint that yield lists of
+# NetBox device records (dict).  That function is an async generator that
+# returns a list of dict.  The custom fetching function takes as an argument an
+# instance of the NetBoxClient API so that it can fetch records from NetBox.
 
 YieldsNetBoxDeviceList = AsyncGenerator[list[dict], None]
 CustomFetchFuncType = Callable[[NetboxClient, ...], YieldsNetBoxDeviceList]
@@ -57,15 +59,16 @@ class NetBoxDynamicInventory:
     def __init__(self):
         """Constructor for the NetBoxDynamicInventory class."""
 
-        # Uses the NetBox device record "id" field as the key into the
+        # Uses the NetBox device record "id" field (int) as the key into the
         # dictionary so that we have a unique set of device recoreds.  This
         # handles the case where the Caller might have made multiple fetch
         # calls that results in duplicate device records.
 
         self.netbox_devices: dict[int, dict] = dict()
 
-        # The resulting set of Device instances that are created from the
-        # NetBox records.  This set is created by the `build_inventory` method.
+        # The resulting set of Device instances (partial mode) that are created
+        # from the NetBox records.  This set is created by the
+        # `build_inventory` method.
 
         self.inventory: set[DeviceNonExclusive] = set()
 
@@ -134,16 +137,20 @@ class NetBoxDynamicInventory:
         is stored in the 'inventory' attribute.
         """
 
+        # create a mapping from DeviceType to a subclass of Device so that we
+        # can create instances of that class.
+
         dev_type_map = {
+            # key: value
             # we need to define specific class definitions dynamically using
             # "type" for each of the OS+Device-Type combinations. we will map
             # these to the Device instances that we will create.
-            (os_name, device_type): type(
-                f"{os_name}_{device_type}",
+            device_type: type(
+                device_type,
                 (DeviceNonExclusive,),
                 dict(os_name=os_name, device_type=device_type.upper()),
             )
-            # build the unique set of OS+Device-Type combinations so that we
+            # build the unique set of DeviceType combinations so that we
             # can dynamically build the classes for each of these.
             for os_name, device_type in set(
                 (dev["platform"]["slug"], dev["device_type"]["slug"])
@@ -159,23 +166,30 @@ class NetBoxDynamicInventory:
         self.inventory.clear()
 
         for nb_dev in self.netbox_devices.values():
-            dev_cls = dev_type_map[
-                (nb_dev["platform"]["slug"], nb_dev["device_type"]["slug"])
-            ]
+            # get the Device class given the device type value in the NetBox
+            # device record.
+
+            dev_cls = dev_type_map[nb_dev["device_type"]["slug"]]
+
+            # create a NetCAD device instance based on that class and assign
+            # the primary IP address for management reachability.
+
             dev = dev_cls(name=nb_dev["name"])
             pri_intf = dev.interfaces["primary_interface"]
             pri_intf.profile = InterfaceL3(
                 if_ipaddr=IPv4Interface(nb_dev["primary_ip"]["address"])
             )
             dev.set_primary_ip_interface(pri_intf)
+
+            # add the device to the dynamic inventory set.
             self.inventory.add(dev)
 
         return self.inventory
 
     def api(self, **kwargs) -> NetboxClient:  # noqa
         """
-        This function is used to return an API client instance to NetBox so
-        that the Caller can make direct calls as needed to retrieve device
+        This helper function is used to return an API client instance to NetBox
+        so that the Caller can make direct calls as needed to retrieve device
         records.  This method exists should the Caller want to sublcass and
         customize the NetBoxClient instance.
 
@@ -206,8 +220,8 @@ class NetBoxDynamicInventory:
     # -------------------------------------------------------------------------
 
     def __len__(self):
-        """returns the number of inventory currently in the inventory."""
-        return len(self.netbox_devices)
+        """returns the number of netbox currently in the inventory."""
+        return len(self.inventory)
 
     # -------------------------------------------------------------------------
     #                           Context Manager Methods
