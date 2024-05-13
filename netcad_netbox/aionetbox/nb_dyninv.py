@@ -40,7 +40,7 @@ class NetBoxDynamicInventory:
 
     def __init__(self):
         """Constructor for the NetBoxDynamicInventory class."""
-        self.netbox_devices: dict[tuple, dict] = dict()
+        self.netbox_devices: dict[int, dict] = dict()
         self.devices: set[DeviceNonExclusive] = set()
 
     # -------------------------------------------------------------------------
@@ -89,8 +89,7 @@ class NetBoxDynamicInventory:
         return records
 
     def add_netbox_devices(self, records: dict):
-        for rec in records:
-            self.netbox_devices[rec["name"]] = rec
+        self.netbox_devices.update({rec["id"]: rec for rec in records})
 
     async def custom_fetch(self, fetching_func, *args, **kwargs):
         """
@@ -209,10 +208,10 @@ class NetBoxDynamicInventory:
     #  design.
     # -------------------------------------------------------------------------
 
-    def __aenter__(self):
+    async def __aenter__(self):
         """returns the instance when entering the context manager."""
         return self
 
-    def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         """create the inventory when exiting the context manager."""
         self.build_inventory()
