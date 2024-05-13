@@ -17,7 +17,6 @@ from netcad.device.profiles import InterfaceL3
 # -----------------------------------------------------------------------------
 
 from netcad_netbox.aionetbox import NetboxClient, Pager
-from .nb_fetch import fetch_devices_by_name
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -127,25 +126,6 @@ class NetBoxDynamicInventory:
         async with self.api() as api:
             async for nb_recs in fetching_func(api, *args, **kwargs):
                 self.add_netbox_devices(nb_recs)
-
-    async def fetch_devices_by_name(self, names: Sequence[str]):
-        """
-        This function is used to retrieve a list of device records by name.  The caller must provide
-        the list of device names.  The resulting device records are added to the internally managed list
-        of NetBox inventory.
-
-        Parameters
-        ----------
-        names
-            The list of device names to retrieve.
-
-        Returns
-        -------
-        The list of device records.
-        """
-        devices = await fetch_devices_by_name(self.api(), names)
-        self.add_netbox_devices(devices)
-        return devices
 
     def build_inventory(self):
         """
