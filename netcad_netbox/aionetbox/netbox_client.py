@@ -63,11 +63,12 @@ class NetboxClient(AsyncClient):
     """
 
     ENV_VARS = ["NETBOX_ADDR", "NETBOX_TOKEN"]
+    DEFAULT_SWAGGER_FILE = "openapi_spec3_6.json"
     DEFAULT_TIMEOUT = 60
     DEFAULT_PAGE_SZ = 1000
     API_RATE_LIMIT = 100
 
-    def __init__(self, base_url=None, token=None, **kwargs):
+    def __init__(self, base_url=None, token=None, swagger_file=None, **kwargs):
         """
         Construction for NetBox client.  If base_url and/or token are not
         provided, then use the ENV variables.
@@ -76,6 +77,9 @@ class NetboxClient(AsyncClient):
         ----------
         base_url: httpx.URL | str
         token: str
+        swagger_file: str
+            The file-path to the OpenAPI spec file.  If not provided, then the default
+            value will be used
         kwargs:
             Any other httpx.AsyncClient constructor kwargs
         """
@@ -87,14 +91,13 @@ class NetboxClient(AsyncClient):
 
         kwargs.setdefault("verify", False)
         kwargs.setdefault("timeout", self.DEFAULT_TIMEOUT)
+        kwargs.setdefault("follow_redirects", True)
 
-        super().__init__(
-            base_url=f"{url}/api",
-            **kwargs,
-        )
+        super().__init__(base_url=f"{url}/api", **kwargs)
+
         self.headers["Authorization"] = f"Token {token}"
         self._api_s4 = asyncio.Semaphore(self.API_RATE_LIMIT)
-        swagger_file = _g_module_dir / "openapi_spec3_3.json"
+        swagger_file = _g_module_dir / (swagger_file or self.DEFAULT_SWAGGER_FILE)
         self.op = SwaggerExecutor(client=self, specfile=str(swagger_file))
 
     # -------------------------------------------------------------------------
