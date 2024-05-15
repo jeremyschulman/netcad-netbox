@@ -112,7 +112,7 @@ class NetBoxDynamicInventory:
 
         return records
 
-    def add_netbox_devices(self, records: Sequence[dict]):
+    def add_netbox_devices(self, records: Sequence[dict]) -> Sequence[DeviceNonExclusive]:
         """
         Helper function to add device records to the internal list of NetBox
         inventory.  Uses the NetBox device record "id" field as the key into the
@@ -125,6 +125,7 @@ class NetBoxDynamicInventory:
         records
             The list of NetBox device records
         """
+        devices = dict()
 
         for nb_dev_rec in records:
             # if the device record already exists in the inventory, skip it.
@@ -154,7 +155,11 @@ class NetBoxDynamicInventory:
             # add the Device instance to the inventory dictionary with the
             # back-reference to the NetBox device record via the "id" field.
 
-            self.inventory[device] = nb_id
+            devices[device] = nb_id
+
+        self.inventory.update(devices)
+        return devices
+
 
     # -------------------------------------------------------------------------
     #
